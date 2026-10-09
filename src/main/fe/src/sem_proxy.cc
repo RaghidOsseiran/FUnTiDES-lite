@@ -51,6 +51,10 @@ SEMproxy::SEMproxy(const SemProxyOptions& opt)
   cout << boolalpha;
   bool isElastic = isElastic_;
 
+  is_snapshots_ = opt.useSnapshots;
+  snap_time_interval_ = opt.snapshotsInterval;
+  snap_folder_ = opt.snapshotsFolder;
+
   const SolverFactory::methodType methodType = getMethod(opt.method);
   const SolverFactory::implemType implemType = getImplem(opt.implem);
   const SolverFactory::meshType meshType = getMesh(opt.mesh);
@@ -162,6 +166,9 @@ void SEMproxy::run()
       m_solver->outputSolutionValues(indexTimeSample, i1, rhsElement[0],
                                      pnGlobal, "pnGlobal");
     }
+
+    if (is_snapshots_)
+      saveSnapshot(indexTimeSample);
 
     // Save pressure at receiver
     const int order = m_mesh->getOrder();
@@ -388,4 +395,20 @@ float SEMproxy::find_cfl_dt(float cfl_factor)
   float dt = cfl_factor * min_spacing / (sqrtDim3 * v_max);
 
   return dt;
+}
+
+void SEMproxy::saveSnapshot(int timestep){
+  if (timestep % snap_time_interval_)
+    return;
+
+  std::ofstream csv(snap_folder_ + "/./snap-" + std::to_string(timestep) + ".csv");
+  csv << "x;y;z;v\n";
+  for (size_t i = 0; i < m_mesh->getNumberOfNodes(); i++) {
+    // std::cout << pnGlobal(i, i1) << std::endl;
+    csv << m_mesh->nodeCoord(i, 0) << ";";
+    csv << m_mesh->nodeCoord(i, 1) << ";";
+    csv << m_mesh->nodeCoord(i, 2) << ";";
+    csv << pnGlobal(i, i1) << "\n";
+  }
+  csv.close();
 }
