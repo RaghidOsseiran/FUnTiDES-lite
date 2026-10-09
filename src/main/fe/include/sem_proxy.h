@@ -35,7 +35,7 @@ class SEMproxy
   /**
    * @brief Destructor of the SEMproxy class
    */
-  ~SEMproxy(){};
+  ~SEMproxy() {};
 
   /**
    * @brief Initialize the simulation.
@@ -76,6 +76,8 @@ class SEMproxy
 
   void saveSnapshot(int timestep);
 
+  void saveSeismograms(void);
+
  private:
   int i1 = 0;
   int i2 = 1;
@@ -92,6 +94,11 @@ class SEMproxy
   bool is_snapshots_;
   int snap_time_interval_;
   std::string snap_folder_;
+
+  // sismos
+  std::ifstream receiver_positions_stream_;
+  std::string seismograms_data_folder_;
+  std::vector<std::pair<int, std::array<float, 3>>> rcv_coords_ = {};
 
   // physics
   bool isElastic_;
@@ -127,6 +134,7 @@ class SEMproxy
 
   // private methods to pars argv options
   int getPhysic(string physicArg);
+  void loadReceiverPositions(string filepath);
   SolverFactory::implemType getImplem(string implemArg);
   SolverFactory::methodType getMethod(string methodArg);
   SolverFactory::meshType getMesh(string meshArg);

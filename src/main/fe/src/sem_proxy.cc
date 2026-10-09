@@ -13,6 +13,8 @@
 #include <source_and_receiver_utils.h>
 
 #include <cxxopts.hpp>
+#include <filesystem>
+#include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
@@ -51,13 +53,15 @@ SEMproxy::SEMproxy(const SemProxyOptions& opt)
   cout << boolalpha;
   bool isElastic = isElastic_;
 
+  loadReceiverPositions(opt.receiver_positions_file);
   const SolverFactory::methodType methodType = getMethod(opt.method);
   const SolverFactory::implemType implemType = getImplem(opt.implem);
   const SolverFactory::meshType meshType = getMesh(opt.mesh);
   const SolverFactory::modelLocationType modelLocation =
       isModelOnNodes ? SolverFactory::modelLocationType::OnNodes
                      : SolverFactory::modelLocationType::OnElements;
-  const SolverFactory::physicType physicType = SolverFactory::physicType::Acoustic;
+  const SolverFactory::physicType physicType =
+      SolverFactory::physicType::Acoustic;
 
   float lx = domain_size_[0];
   float ly = domain_size_[1];
@@ -137,7 +141,6 @@ SEMproxy::SEMproxy(const SemProxyOptions& opt)
   std::cout << "Order of approximation will be " << order << std::endl;
   std::cout << "Time step is " << dt_ << "s" << std::endl;
   std::cout << "Simulated time is " << timemax_ << "s" << std::endl;
-
 }
 
 void SEMproxy::run()
@@ -159,30 +162,37 @@ void SEMproxy::run()
 
     if (indexTimeSample % 50 == 0)
     {
-      m_solver->outputSolutionValues(indexTimeSample, i1, rhsElement[0],
-                                     pnGlobal, "pnGlobal");
+      for (int i = 0; i < rcv_coords_.size(); ++i)
+      {
+        int id = rcv_coords_[i].first;
+        m_solver->outputSolutionValues(indexTimeSample, i1, rhsElement[id],
+                                       pnGlobal, "pnGlobal");
+      }
     }
 
     // Save pressure at receiver
     const int order = m_mesh->getOrder();
-
-    float varnp1 = 0.0;
-    for (int i = 0; i < order + 1; i++)
+    for (int p = 0; p < rcv_coords_.size(); ++p)
     {
-      for (int j = 0; j < order + 1; j++)
+      const int id = rcv_coords_[p].first;
+      float varnp1 = 0.0;
+      for (int i = 0; i < order + 1; i++)
       {
-        for (int k = 0; k < order + 1; k++)
+        for (int j = 0; j < order + 1; j++)
         {
-          int nodeIdx = m_mesh->globalNodeIndex(rhsElementRcv[0], i, j, k);
-          int globalNodeOnElement =
-              i + j * (order + 1) + k * (order + 1) * (order + 1);
-          varnp1 +=
-              pnGlobal(nodeIdx, i2) * rhsWeightsRcv(0, globalNodeOnElement);
+          for (int k = 0; k < order + 1; k++)
+          {
+            int nodeIdx = m_mesh->globalNodeIndex(rhsElementRcv[id], i, j, k);
+            int globalNodeOnElement =
+                i + j * (order + 1) + k * (order + 1) * (order + 1);
+            varnp1 +=
+                pnGlobal(nodeIdx, i2) * rhsWeightsRcv(id, globalNodeOnElement);
+          }
         }
       }
-    }
 
-    pnAtReceiver(0, indexTimeSample) = varnp1;
+      pnAtReceiver(p, indexTimeSample) = varnp1;
+    }
 
     swap(i1, i2);
 
@@ -218,11 +228,14 @@ void SEMproxy::init_arrays()
   myRHSTerm = allocateArray2D<arrayReal>(myNumberOfRHS, num_sample_, "RHSTerm");
   pnGlobal =
       allocateArray2D<arrayReal>(m_mesh->getNumberOfNodes(), 2, "pnGlobal");
-  pnAtReceiver = allocateArray2D<arrayReal>(1, num_sample_, "pnAtReceiver");
+  pnAtReceiver = allocateArray2D<arrayReal>(rcv_coords_.size(), num_sample_,
+                                            "pnAtReceiver");
   // Receiver
-  rhsElementRcv = allocateVector<vectorInt>(1, "rhsElementRcv");
+  rhsElementRcv =
+      allocateVector<vectorInt>(rcv_coords_.size(), "rhsElementRcv");
   rhsWeightsRcv = allocateArray2D<arrayReal>(
-      1, m_mesh->getNumberOfPointsPerElement(), "RHSWeightRcv");
+      rcv_coords_.size(), m_mesh->getNumberOfPointsPerElement(),
+      "RHSWeightRcv");
 }
 
 // Initialize sources
@@ -353,6 +366,28 @@ void SEMproxy::init_source()
   }
 }
 
+void SEMproxy::loadReceiverPositions(string filepath)
+{
+  if (filepath.empty()) return;
+  receiver_positions_stream_.open(filepath, std::ios::in);
+  if (!receiver_positions_stream_) throw std::runtime_error("Cannot open file");
+
+  std::string line;
+  while (std::getline(receiver_positions_stream_, line))
+  {
+    if ((line == "id,x,y,z") || line.empty()) continue;
+    int idRcv;
+    float rcv_x, rcv_y, rcv_z;
+    if (std::sscanf(line.c_str(), "%d,%f,%f,%f\n", &idRcv, &rcv_x, &rcv_y,
+                    &rcv_z) != 4)
+      throw std::runtime_error("Wrong format in file");
+    rcv_coords_.push_back(
+        std::pair<int, std::array<float, 3>>{idRcv, {rcv_x, rcv_y, rcv_z}});
+  }
+
+  receiver_positions_stream_.close();
+}
+
 SolverFactory::implemType SEMproxy::getImplem(string implemArg)
 {
   if (implemArg == "makutu") return SolverFactory::MAKUTU;
@@ -388,4 +423,30 @@ float SEMproxy::find_cfl_dt(float cfl_factor)
   float dt = cfl_factor * min_spacing / (sqrtDim3 * v_max);
 
   return dt;
+}
+
+void SEMproxy::saveSeismograms(void)
+{
+  seismograms_data_folder_ = "seismograms_data";
+  std::filesystem::path output_directory(seismograms_data_folder_);
+  bool create = std::filesystem::create_directory(output_directory);
+  if (!std::filesystem::is_directory(seismograms_data_folder_))
+    throw std::runtime_error("Path exists but it is not a directory");
+
+  std::ofstream out(output_directory / "seismogram_recording.csv");
+  if (!out) throw std::runtime_error("Cannot open the file");
+  out << "id,timestamp,pn\n";
+
+  for (int indexTimeSample = 0; indexTimeSample < num_sample_;
+       indexTimeSample++)
+  {
+    for (int p = 0; p < rcv_coords_.size(); ++p)
+    {
+      const int id = rcv_coords_[p].first;
+      out << id << ',' << indexTimeSample << ','
+          << pnAtReceiver(id, indexTimeSample) << '\n';
+    }
+  }
+
+  out.close();
 }
