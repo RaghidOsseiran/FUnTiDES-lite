@@ -1,0 +1,125 @@
+# =============================================================================
+# IOPS Configuration - IOR Benchmark (SLURM Cluster)
+# =============================================================================
+#
+# A simple configuration for running IOR benchmarks on a SLURM cluster.
+#
+# Quick Start:
+#   1. Update paths: workdir, output file path in command template
+#   2. Update SLURM directives: partition, time limit, modules
+#   3. Validate: iops check my_config.yaml
+#   4. Dry run:  iops run my_config.yaml --dry-run
+#   5. Execute:  iops run my_config.yaml
+#
+# For a fully documented template with all options, run: iops generate --full
+# =============================================================================
+
+benchmark:
+  name: "FUnTIDES Lite"
+  workdir: "./benchmarks"
+  repetitions: 1
+  search_method: "exhaustive"
+  executor: "local"
+  cache_file: "{{ workdir }}/iops_cache.db"
+
+vars:
+  # Total MPI tasks
+  n_iterations:
+    type: int
+    sweep:
+      mode: list
+      values: [1]
+
+  size:
+    type: int
+    sweep: 
+      mode: list
+      values: [1]
+
+  # Computed block size per process
+  with_cuda:
+    type: bool
+    sweep:
+      mode: list
+      values: [True]
+
+  # Output file for IOR JSON summary
+  summary_file:
+    type: str
+    expr: "{{ execution_dir }}/output.txt"
+
+command:
+  template: >
+    ./build/bin/semproxy
+
+scripts:
+  - name: "FUnTIDES-lite"
+    script_template: |
+      #!/bin/bash
+
+      set -euo pipefail
+
+      # Customize our env
+      # #SBATCH --account=your_account
+      # export OMP_NUM_THREADS=4
+
+      {{ command.template }} -ex {{ size }} >> {{ summary_file }}
+
+    parser:
+      file: "{{ summary_file }}"
+      metrics:
+        - name: time_init
+          type: float
+        - name: time_compute
+          type: float
+        - name: time_total
+          type: float
+        - name: time_write_snapshot
+          type: float
+        - name: size_snapshot
+          type: float
+        - name: number_save_snapshot
+          type: int
+        - name: time_write_sismos
+          type: float
+        - name: size_sismos
+          type: float
+        - name: number_save_sismos
+          type: int
+      parser_script: |
+        import json
+
+        def parse(file_path: str):
+          with open(file_path, "r") as f:
+            
+            time_init = None
+            time_compute = None
+            time_total = None
+
+            # Actual values that we can't parse
+            time_write_snapshot = None
+            size_snapshot = None
+            number_save_snapshot = None
+            time_write_sismos = None
+            size_sismos = None
+            number_save_sismos = None
+
+            lines = f.readlines()
+
+            for line in lines:
+              if "Elapsed Initial Time :" in line:
+                time_init = float(line.split("Elapsed Initial Time :")[1].strip().rstrip("seconds."))
+              elif "Elapsed Compute Time :" in line:
+                time_compute = float(line.split("Elapsed Compute Time :")[1].strip().rstrip("seconds."))
+              elif "Elapsed TotalExe Time :" in line:
+                time_total =  float(line.split("Elapsed TotalExe Time :")[1].strip().rstrip("seconds.")) 
+
+
+          return {"time_init"    : time_init,
+                  "time_compute" : time_compute,
+                  "time_total"   : time_total}
+
+output:
+  sink:
+    type: csv
+    path: "{{ workdir }}/funtides_results.csv"
