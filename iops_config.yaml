@@ -20,7 +20,7 @@ benchmark:
   repetitions: 1
   search_method: "exhaustive"
   executor: "local"
-  cache_file: "{{ workdir }}/iops_cache.db"
+  cache_file: "./iops_cache.db"
 
 vars:
   # Total MPI tasks
@@ -50,7 +50,7 @@ vars:
 
 command:
   template: >
-    ./build/bin/semproxy
+    ./../../../../../build/bin/semproxy
 
 scripts:
   - name: "FUnTIDES-lite"
