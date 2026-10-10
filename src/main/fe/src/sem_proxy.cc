@@ -164,8 +164,7 @@ void SEMproxy::run()
     {
       for (int i = 0; i < rcv_coords_.size(); ++i)
       {
-        int id = rcv_coords_[i].first;
-        m_solver->outputSolutionValues(indexTimeSample, i1, rhsElement[id],
+        m_solver->outputSolutionValues(indexTimeSample, i1, rhsElementRcv[i],
                                        pnGlobal, "pnGlobal");
       }
     }
@@ -174,7 +173,6 @@ void SEMproxy::run()
     const int order = m_mesh->getOrder();
     for (int p = 0; p < rcv_coords_.size(); ++p)
     {
-      const int id = rcv_coords_[p].first;
       float varnp1 = 0.0;
       for (int i = 0; i < order + 1; i++)
       {
@@ -182,11 +180,11 @@ void SEMproxy::run()
         {
           for (int k = 0; k < order + 1; k++)
           {
-            int nodeIdx = m_mesh->globalNodeIndex(rhsElementRcv[id], i, j, k);
+            int nodeIdx = m_mesh->globalNodeIndex(rhsElementRcv[p], i, j, k);
             int globalNodeOnElement =
                 i + j * (order + 1) + k * (order + 1) * (order + 1);
             varnp1 +=
-                pnGlobal(nodeIdx, i2) * rhsWeightsRcv(id, globalNodeOnElement);
+                pnGlobal(nodeIdx, i2) * rhsWeightsRcv(p, globalNodeOnElement);
           }
         }
       }
@@ -320,55 +318,59 @@ void SEMproxy::init_source()
   }
 
   // Receiver computation
-  int receiver_index = floor((rcv_coord_[0] * ex) / lx) +
-                       floor((rcv_coord_[1] * ey) / ly) * ex +
-                       floor((rcv_coord_[2] * ez) / lz) * ey * ex;
-
-  for (int i = 0; i < 1; i++)
+  for (int p = 0; p < rcv_coords_.size(); ++p)
   {
-    rhsElementRcv[i] = receiver_index;
-  }
+    int receiver_index = floor((rcv_coords_[p].second[0] * ex) / lx) +
+                         floor((rcv_coords_[p].second[1] * ey) / ly) * ex +
+                         floor((rcv_coords_[p].second[2] * ez) / lz) * ey * ex;
 
-  // Get coordinates of the corners of the receiver element
-  float cornerCoordsRcv[8][3];
-  I = 0;
-  for (int k : nodes_corner)
-  {
-    for (int j : nodes_corner)
+    rhsElementRcv[p] = receiver_index;
+
+    // Get coordinates of the corners of the receiver element
+    float cornerCoordsRcv[8][3];
+    I = 0;
+    for (int k : nodes_corner)
     {
-      for (int i : nodes_corner)
+      for (int j : nodes_corner)
       {
-        int nodeIdx = m_mesh->globalNodeIndex(rhsElementRcv[0], i, j, k);
-        cornerCoordsRcv[I][0] = m_mesh->nodeCoord(nodeIdx, 0);
-        cornerCoordsRcv[I][2] = m_mesh->nodeCoord(nodeIdx, 2);
-        cornerCoordsRcv[I][1] = m_mesh->nodeCoord(nodeIdx, 1);
-        I++;
+        for (int i : nodes_corner)
+        {
+          int nodeIdx = m_mesh->globalNodeIndex(rhsElementRcv[p], i, j, k);
+          cornerCoordsRcv[I][0] = m_mesh->nodeCoord(nodeIdx, 0);
+          cornerCoordsRcv[I][2] = m_mesh->nodeCoord(nodeIdx, 2);
+          cornerCoordsRcv[I][1] = m_mesh->nodeCoord(nodeIdx, 1);
+          I++;
+        }
       }
     }
-  }
 
-  switch (order)
-  {
-    case 1:
-      SourceAndReceiverUtils::ComputeRHSWeights<1>(cornerCoordsRcv, rcv_coord_,
-                                                   rhsWeightsRcv);
-      break;
-    case 2:
-      SourceAndReceiverUtils::ComputeRHSWeights<2>(cornerCoordsRcv, rcv_coord_,
-                                                   rhsWeightsRcv);
-      break;
-    case 3:
-      SourceAndReceiverUtils::ComputeRHSWeights<3>(cornerCoordsRcv, rcv_coord_,
-                                                   rhsWeightsRcv);
-      break;
-    default:
-      throw std::runtime_error("Unsupported order: " + std::to_string(order));
+    switch (order)
+    {
+      case 1:
+        SourceAndReceiverUtils::ComputeRHSWeights<1>(
+            cornerCoordsRcv, rcv_coords_[p].second, rhsWeightsRcv, p);
+        break;
+      case 2:
+        SourceAndReceiverUtils::ComputeRHSWeights<2>(
+            cornerCoordsRcv, rcv_coords_[p].second, rhsWeightsRcv, p);
+        break;
+      case 3:
+        SourceAndReceiverUtils::ComputeRHSWeights<3>(
+            cornerCoordsRcv, rcv_coords_[p].second, rhsWeightsRcv, p);
+        break;
+      default:
+        throw std::runtime_error("Unsupported order: " + std::to_string(order));
+    }
   }
 }
 
 void SEMproxy::loadReceiverPositions(string filepath)
 {
-  if (filepath.empty()) return;
+  if (filepath.empty())
+  {
+    rcv_coords_.push_back({0, rcv_coord_});
+    return;
+  }
   receiver_positions_stream_.open(filepath, std::ios::in);
   if (!receiver_positions_stream_) throw std::runtime_error("Cannot open file");
 
@@ -435,17 +437,34 @@ void SEMproxy::saveSeismograms(void)
 
   std::ofstream out(output_directory / "seismogram_recording.csv");
   if (!out) throw std::runtime_error("Cannot open the file");
-  out << "id,timestamp,pn\n";
+  out << "step,time";
+
+  for (int rcv = 0; rcv < rcv_coords_.size(); ++rcv)
+    out << ",rcv_" << rcv_coords_[rcv].first;
+
+  for (int rcv = 0; rcv < rcv_coords_.size(); ++rcv)
+    out << ",rcv_" << rcv_coords_[rcv].first << "_x" << ",rcv_"
+        << rcv_coords_[rcv].first << "_y" << ",rcv_" << rcv_coords_[rcv].first
+        << "_z";
+
+  out << '\n';
 
   for (int indexTimeSample = 0; indexTimeSample < num_sample_;
        indexTimeSample++)
   {
+    out << indexTimeSample << ',' << indexTimeSample * dt_;
     for (int p = 0; p < rcv_coords_.size(); ++p)
     {
-      const int id = rcv_coords_[p].first;
-      out << id << ',' << indexTimeSample << ','
-          << pnAtReceiver(id, indexTimeSample) << '\n';
+      out << ',' << pnAtReceiver(p, indexTimeSample);
     }
+
+    for (int p = 0; p < rcv_coords_.size(); ++p)
+    {
+      out << ',' << rcv_coords_[p].second[0] << ',' << rcv_coords_[p].second[1]
+          << ',' << rcv_coords_[p].second[2];
+    }
+
+    out << '\n';
   }
 
   out.close();

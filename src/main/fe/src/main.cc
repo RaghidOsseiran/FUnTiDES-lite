@@ -9,7 +9,7 @@
 
 time_point<system_clock> startInitTime;
 
-void compute(SEMproxy &semsim)
+void compute(SEMproxy& semsim)
 {
   cout << "\n+================================= " << endl;
   cout << "| Running SEM Application ...      " << endl;
@@ -23,6 +23,8 @@ void compute(SEMproxy &semsim)
   cout << "| SEM Application Finished.       " << endl;
   cout << "+================================= \n" << endl;
 
+  semsim.saveSeismograms();
+
   // print timing information
   cout << "Elapsed Initial Time : "
        << (startRunTime - startInitTime).count() / 1E9 << " seconds." << endl;
@@ -31,9 +33,9 @@ void compute(SEMproxy &semsim)
        << endl;
 };
 
-void compute_loop(SEMproxy &semsim) { compute(semsim); }
+void compute_loop(SEMproxy& semsim) { compute(semsim); }
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
   startInitTime = system_clock::now();
 
@@ -64,7 +66,7 @@ int main(int argc, char *argv[])
     {
       opt.validate();
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
       // your error path (no help printing here)
       std::cerr << "Invalid options: " << e.what() << "\n";
