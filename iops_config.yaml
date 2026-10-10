@@ -50,7 +50,7 @@ vars:
 
 command:
   template: >
-    ./../../../../../build/bin/semproxy
+    semproxy
 
 scripts:
   - name: "FUnTIDES-lite"
