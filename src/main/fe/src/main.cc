@@ -23,7 +23,9 @@ void compute(SEMproxy& semsim)
   cout << "| SEM Application Finished.       " << endl;
   cout << "+================================= \n" << endl;
 
+  time_point<system_clock> startSaveSeismosTime = system_clock::now();
   semsim.saveSeismograms();
+  time_point<system_clock> endSaveSeismosTime = system_clock::now();
 
   // print timing information
   cout << "Elapsed Initial Time : "
@@ -31,6 +33,10 @@ void compute(SEMproxy& semsim)
   cout << "Elapsed Compute Time : "
        << (system_clock::now() - startRunTime).count() / 1E9 << " seconds."
        << endl;
+  cout << "Elapsed Saving Seismos Time : "
+       << (endSaveSeismosTime - startSaveSeismosTime).count() / 1E9 << " seconds."
+       << endl;
+  // cout << "LoC : " << semsim.getSeismosLoC() << endl;
 };
 
 void compute_loop(SEMproxy& semsim) { compute(semsim); }

@@ -437,6 +437,7 @@ void SEMproxy::saveSeismograms(void)
 
   std::ofstream out(output_directory / "seismogram_recording.csv");
   if (!out) throw std::runtime_error("Cannot open the file");
+  line_of_contents_ = 0;
   out << "step,time";
 
   for (int rcv = 0; rcv < rcv_coords_.size(); ++rcv)
@@ -465,7 +466,10 @@ void SEMproxy::saveSeismograms(void)
     }
 
     out << '\n';
+    line_of_contents_++;
   }
 
   out.close();
 }
+
+int SEMproxy::getSeismosLoC(void) {return line_of_contents_;}
