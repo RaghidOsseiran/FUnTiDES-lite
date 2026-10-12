@@ -30,6 +30,8 @@ class SemProxyOptions
   bool useSnapshots = false;
   int snapshotsInterval = 10;
   std::string snapshotsFolder = ".";
+  bool snapshotUseCSV = 0;
+  bool snapshotUseHeaders = 0;
 
   void validate() const
   {
@@ -84,6 +86,8 @@ class SemProxyOptions
         "is-elastic", "Elastic simulation", cxxopts::value<bool>(o.isElastic))
         ("use-snapshots", "Create snapshots of the simulation", cxxopts::value<bool>(o.useSnapshots))
         ("snapshots-interval", "Number of simulation steps between each snapshots", cxxopts::value<int>(o.snapshotsInterval))
-        ("snapshots-folder", "Folder where the snapshots are stored", cxxopts::value<std::string>(o.snapshotsFolder));
+        ("snapshots-folder", "Folder where the snapshots are stored", cxxopts::value<std::string>(o.snapshotsFolder))
+        ("snapshots-use-headers", "Use headers for the snapshots points", cxxopts::value<bool>(o.snapshotUseHeaders))
+        ("snapshots-use-csv", "Use csv for the snapshots format", cxxopts::value<bool>(o.snapshotUseCSV));
   }
 };
