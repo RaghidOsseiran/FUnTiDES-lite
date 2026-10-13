@@ -54,8 +54,8 @@ SEMproxy::SEMproxy(const SemProxyOptions& opt)
   is_snapshots_ = opt.useSnapshots;
   snap_time_interval_ = opt.snapshotsInterval;
   snap_folder_ = opt.snapshotsFolder;
-  snap_use_csv_ = opt.snapshotUseCSV;
-  snap_use_header_ = opt.snapshotUseHeaders;
+  snap_use_csv_ = opt.snapshotsUseCSV;
+  snap_use_header_ = opt.snapshotsUseHeaders;
 
   const SolverFactory::methodType methodType = getMethod(opt.method);
   const SolverFactory::implemType implemType = getImplem(opt.implem);
@@ -399,49 +399,74 @@ float SEMproxy::find_cfl_dt(float cfl_factor)
   return dt;
 }
 
-void SEMproxy::saveSnapshot(int timestep) {
-  if (timestep % snap_time_interval_)
-    return;
-
-  std::string path = snap_folder_ + "/./snap-" + std::to_string(timestep);
-  std::ofstream file;
-
-  if (snap_use_csv_)
-    file.open(path + ".csv");
-  else
-    file.open(path + ".dat", ios::binary);
+void SEMproxy::saveSnapshotCsv(int timestep) {
+  std::ofstream file(snap_folder_ + "/./snap-" + std::to_string(timestep) + ".csv");
 
   if (snap_use_header_) {
+    for (size_t i = 0; i < m_mesh->getNumberOfNodes(); i++)
+      file << pnGlobal(0, i1) << '\n';
+
     if(timestep == 0) {
-      std::string headpath = snap_folder_ + "/./headers";
-      std::ofstream header_file;
-      if (snap_use_csv_)
-        header_file.open(headpath + ".csv");
-      else
-        header_file.open(headpath + ".dat", ios::binary);
-
-      header_file << m_mesh->getNumberOfNodes();
+      std::ofstream header_file (snap_folder_ + "/./headers.csv");
+      header_file << "x;y;z\n";
       for (size_t i = 0; i < m_mesh->getNumberOfNodes(); i++) {
-          header_file
-            << m_mesh->nodeCoord(i, 0)
-            << m_mesh->nodeCoord(i, 1)
-            << m_mesh->nodeCoord(i, 2);
+        header_file
+          << m_mesh->nodeCoord(i, 0) << ';'
+          << m_mesh->nodeCoord(i, 1) << ';'
+          << m_mesh->nodeCoord(i, 2) << ';' << '\n';
       }
+      header_file.close();
+    }
+  } else {
+    file << "x;y;z";
+    for (size_t i = 0; i < m_mesh->getNumberOfNodes(); i++) {
+      file
+        << m_mesh->nodeCoord(i, 0) << ';'
+        << m_mesh->nodeCoord(i, 1) << ';'
+        << m_mesh->nodeCoord(i, 2) << ';' << '\n';
+    }
+  }
+}
 
+void SEMproxy::saveSnapshotBin(int timestep) {
+  std::ofstream file(snap_folder_ + "/./snap-" + std::to_string(timestep) + ".dat", ios::binary | ios::out);
+
+  if (snap_use_header_) {
+    file.write((char *)&pnGlobal(0, i1), m_mesh->getNumberOfNodes() * sizeof(real_t));
+
+    if(timestep == 0) {
+      std::ofstream header_file (snap_folder_ + "/./headers.dat", ios::binary | ios::out);
+      real_t val[3];
+      for (size_t i = 0; i < m_mesh->getNumberOfNodes(); i++) {
+        val[0] = m_mesh->nodeCoord(i, 0);
+        val[1] = m_mesh->nodeCoord(i, 1);
+        val[2] = m_mesh->nodeCoord(i, 2);
+        header_file.write((char *)&val, 3 * sizeof(real_t));
+      }
       header_file.close();
     }
 
-    for (size_t i = 0; i < m_mesh->getNumberOfNodes(); i++)
-      file  << pnGlobal(i, i1);
   } else {
+    real_t val[4];
     for (size_t i = 0; i < m_mesh->getNumberOfNodes(); i++){
-      file
-        << m_mesh->nodeCoord(i, 0)
-        << m_mesh->nodeCoord(i, 1)
-        << m_mesh->nodeCoord(i, 2)
-        << pnGlobal(i, i1);
+      val[0] = m_mesh->nodeCoord(i, 0);
+      val[1] = m_mesh->nodeCoord(i, 1);
+      val[2] = m_mesh->nodeCoord(i, 2);
+      val[3] = pnGlobal(i, i1);
+      file.write((char *)&val, 4 * sizeof(real_t));
     }
   }
 
   file.close();
+}
+
+void SEMproxy::saveSnapshot(int timestep) {
+  if (timestep % snap_time_interval_)
+    return;
+
+  if (snap_use_csv_) {
+    saveSnapshotCsv(timestep);
+  } else {
+    saveSnapshotBin(timestep);
+  }
 }
