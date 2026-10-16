@@ -35,7 +35,7 @@ class SEMproxy
   /**
    * @brief Destructor of the SEMproxy class
    */
-  ~SEMproxy(){};
+  ~SEMproxy() {};
 
   /**
    * @brief Initialize the simulation.
@@ -74,7 +74,12 @@ class SEMproxy
    */
   float find_cfl_dt(float cfl_factor);
 
+  void saveSnapshotCsv(int timestep);
+  void saveSnapshotBin(int timestep);
   void saveSnapshot(int timestep);
+
+  void saveSeismograms(void);
+  int getSeismosLoC(void);
 
  private:
   int i1 = 0;
@@ -92,6 +97,14 @@ class SEMproxy
   bool is_snapshots_;
   int snap_time_interval_;
   std::string snap_folder_;
+  bool snap_use_csv_ = 0;
+  bool snap_use_header_ = 0;
+
+  // sismos
+  std::ifstream receiver_positions_stream_;
+  std::string seismograms_data_folder_;
+  std::vector<std::pair<int, std::array<float, 3>>> rcv_coords_ = {};
+  int line_of_contents_;
 
   // physics
   bool isElastic_;
@@ -127,6 +140,7 @@ class SEMproxy
 
   // private methods to pars argv options
   int getPhysic(string physicArg);
+  void loadReceiverPositions(string filepath);
   SolverFactory::implemType getImplem(string implemArg);
   SolverFactory::methodType getMethod(string methodArg);
   SolverFactory::meshType getMesh(string meshArg);

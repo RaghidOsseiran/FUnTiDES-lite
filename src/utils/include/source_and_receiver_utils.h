@@ -14,7 +14,7 @@ namespace SourceAndReceiverUtils
 template <int ORDER>
 void ComputeRHSWeights(real_t const (&cornerCoords)[8][3],
                        std::array<float, 3> coordsReal,
-                       ARRAY_REAL_VIEW& rhsWeights)
+                       ARRAY_REAL_VIEW& rhsWeights, int row = 0)
 {
   constexpr int numNodes =
       Qk_Hexahedron_Lagrange_GaussLobatto_Selector<ORDER>::type::numNodes;
@@ -39,7 +39,7 @@ void ComputeRHSWeights(real_t const (&cornerCoords)[8][3],
                                                                    N);
   for (int i = 0; i < numNodes; i++)
   {
-    rhsWeights(0, i) = N[i];
+    rhsWeights(row, i) = N[i];
   }
 }
 
