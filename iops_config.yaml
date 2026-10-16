@@ -116,6 +116,8 @@ scripts:
           return os.path.getsize(path)
 
         def parse(file_path: str):
+          execution_dir = os.path.dirname(file_path)
+
           with open(file_path, "r") as f:
             
             time_init = 0.
@@ -123,44 +125,48 @@ scripts:
             time_total = 0.
 
             time_write_snapshot = 0.
-            size_snapshot = 0.
-            number_save_snapshot = 0.
+            size_snapshot = 0
+            number_save_snapshot = 0
             time_write_sismos = 0.
-            size_sismos = 0.
+            size_sismos = 0
 
             lines = f.readlines()
 
             for line in lines:
               if "Elapsed Initial Time :" in line:
-                time_init = float(line.split("Elapsed Initial Time :")[1].strip().rstrip("seconds."))
+                time_init = float(line.split("Elapsed Initial Time :")[1].split()[0])
               elif "Elapsed Compute Time :" in line:
-                time_compute = float(line.split("Elapsed Compute Time :")[1].strip().rstrip("seconds."))
+                time_compute = float(line.split("Elapsed Compute Time :")[1].split()[0])
               elif "Elapsed TotalExe Time :" in line:
-                time_total = float(line.split("Elapsed TotalExe Time :")[1].strip().rstrip("seconds.")) 
+                time_total = float(line.split("Elapsed TotalExe Time :")[1].split()[0]) 
               elif "Elapsed Saving Snapshot Time :" in line:
-                time_write_snapshot += float(line.split("Elapsed Saving Snapshot Time :")[1].strip().rstrip("seconds."))
-                count += 1
+                time_write_snapshot += float(line.split("Elapsed Saving Snapshot Time :")[1].split()[0])
+                number_save_snapshot += 1
               elif "Elapsed Saving Seismos Time :" in line:
-                  time_write_sismos = float(line.split("Elapsed Saving Seismos Time :")[1].strip().rstrip("seconds."))
+                time_write_sismos = float(line.split("Elapsed Saving Seismos Time :")[1].split()[0])
               elif "Snapshot save successfully at :" in line:
-                  if size_snapshot == 0:
-                      raw_path = line.split("Snapshot save successfully at :")[1].strip(' "\n\t')
-                      snapshot_path = os.path.normpath(raw_path)
-                      size_snapshot = get_snapshot_size(snapshot_path)
+                if size_snapshot == 0:
+                  raw_path = line.split("Snapshot save successfully at :")[1].strip(' "\n\t')
+                  snapshot_path = os.path.normpath(raw_path)
+                  size_snapshot = get_snapshot_size(snapshot_path)
               elif "Sismo save successfully at :" in line:
-                  raw_path = line.split("Sismo save successfully at :")[1].strip(' "\n\t')
-                  full_sismo_path = os.path.normpath(os.path.join(execution_dir, raw_path))
-                  size_sismos = get_sismo_size(full_sismo_path)
+                raw_path = line.split("Sismo save successfully at :")[1].strip(' "\n\t')
+                full_sismo_path = os.path.normpath(os.path.join(execution_dir, raw_path))
+                size_sismos = get_sismo_size(full_sismo_path)
 
-          return {"time_init"    : time_init,
-                  "time_compute" : time_compute,
-                  "time_total"   : time_total,
-                  "time_write_snapshot" : time_write_snapshot,
-                  "size_snapshot": size_snapshot,
-                  "number_save_snapshot": number_save_snapshot,
-                  "time_write_sismos"   : time_write_sismos,
-                  "size_sismos"  : size_sismos,
-                }
+          if count > 0:
+            time_write_snapshot = time_write_snapshot / count
+
+          return {
+            "time_init"            : time_init,
+            "time_compute"         : time_compute,
+            "time_total"           : time_total,
+            "time_write_snapshot"  : time_write_snapshot,
+            "size_snapshot"        : size_snapshot,
+            "number_save_snapshot" : number_save_snapshot,
+            "time_write_sismos"    : time_write_sismos,
+            "size_sismos"          : size_sismos,
+          }
 
 output:
   sink:
