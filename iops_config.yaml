@@ -143,13 +143,14 @@ scripts:
               elif "Elapsed Saving Seismos Time :" in line:
                   time_write_sismos = float(line.split("Elapsed Saving Seismos Time :")[1].strip().rstrip("seconds."))
               elif "Snapshot save successfully at :" in line:
-                  if (size_snapshot) == 0:
-                    snapshot_path = line.split("Snapshot save successfully at :")[1]
-                    size_snapshot = get_snapshot_size( {{ snapshot_path }} )
+                  if size_snapshot == 0:
+                      raw_path = line.split("Snapshot save successfully at :")[1].strip(' "\n\t')
+                      snapshot_path = os.path.normpath(raw_path)
+                      size_snapshot = get_snapshot_size(snapshot_path)
               elif "Sismo save successfully at :" in line:
-                  sismos_path = line.split("Sismo save successfully at :")[1]
-                  sismos_path = os.path.join(execution_dir, sismos_path)
-                  size_sismos = get_sismo_size(sismos_path)
+                  raw_path = line.split("Sismo save successfully at :")[1].strip(' "\n\t')
+                  full_sismo_path = os.path.normpath(os.path.join(execution_dir, raw_path))
+                  size_sismos = get_sismo_size(full_sismo_path)
 
           return {"time_init"    : time_init,
                   "time_compute" : time_compute,
