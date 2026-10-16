@@ -36,7 +36,7 @@ vars:
     type: bool
     sweep:
       mode: list
-      values: [true]
+      values: [True]
 
   snapshot_mode:
     type: str
