@@ -105,16 +105,15 @@ scripts:
           type: float
         - name: size_sismos
           type: float
-        - name: number_save_sismos
-          type: int
       parser_script: |
         import json
+        import os
 
         def get_sismo_size(path: str) -> int:
-          return 0
+          return os.path.getsize(path)
 
         def get_snapshot_size(path: str) -> int:
-          return 0
+          return os.path.getsize(path)
 
         def parse(file_path: str):
           with open(file_path, "r") as f:
@@ -128,7 +127,6 @@ scripts:
             number_save_snapshot = 0.
             time_write_sismos = 0.
             size_sismos = 0.
-            number_save_sismos = 0.
 
             lines = f.readlines()
 
@@ -138,8 +136,19 @@ scripts:
               elif "Elapsed Compute Time :" in line:
                 time_compute = float(line.split("Elapsed Compute Time :")[1].strip().rstrip("seconds."))
               elif "Elapsed TotalExe Time :" in line:
-                time_total =  float(line.split("Elapsed TotalExe Time :")[1].strip().rstrip("seconds.")) 
-
+                time_total = float(line.split("Elapsed TotalExe Time :")[1].strip().rstrip("seconds.")) 
+              elif "Elapsed Saving Snapshot Time :" in line:
+                time_write_snapshot += float(line.split("Elapsed Saving Snapshot Time :")[1].strip().rstrip("seconds."))
+                count += 1
+              elif "Elapsed Saving Seismos Time :" in line:
+                  time_write_sismos = float(line.split("Elapsed Saving Seismos Time :")[1].strip().rstrip("seconds."))
+              elif "Snapshot save successfully at :" in line:
+                  if (size_snapshot) == 0:
+                    snapshot_path = line.split("Snapshot save successfully at :")[1]
+                    size_snapshot = get_snapshot_size( {{ snapshot_path }} )
+              elif "Sismo save successfully at :" in line:
+                  sismos_path = line.split("Sismo save successfully at :")[1]
+                  size_sismos = get_sismo_size( {{execution_dir}} + "/" + sismos_path)
 
           return {"time_init"    : time_init,
                   "time_compute" : time_compute,
@@ -149,7 +158,6 @@ scripts:
                   "number_save_snapshot": number_save_snapshot,
                   "time_write_sismos"   : time_write_sismos,
                   "size_sismos"  : size_sismos,
-                  "number_save_sismos"  : number_save_sismos
                 }
 
 output:
