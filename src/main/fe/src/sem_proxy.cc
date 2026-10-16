@@ -487,7 +487,7 @@ void SEMproxy::saveSnapshotCsv(int timestep) {
 
   if (snap_use_header_) {
     for (size_t i = 0; i < m_mesh->getNumberOfNodes(); i++)
-      file << pnGlobal(0, i1) << '\n';
+      file << pnGlobal(i, i1) << '\n';
 
     if(timestep == 0) {
       std::ofstream header_file (snap_folder_ + "/./headers.csv");
@@ -501,12 +501,14 @@ void SEMproxy::saveSnapshotCsv(int timestep) {
       header_file.close();
     }
   } else {
-    file << "x;y;z";
+    file << "x;y;z;v\n";
     for (size_t i = 0; i < m_mesh->getNumberOfNodes(); i++) {
       file
         << m_mesh->nodeCoord(i, 0) << ';'
         << m_mesh->nodeCoord(i, 1) << ';'
-        << m_mesh->nodeCoord(i, 2) << ';' << '\n';
+        << m_mesh->nodeCoord(i, 2) << ';' 
+        << pnGlobal(i, i1)         << ';'
+        << '\n';
     }
   }
 }
