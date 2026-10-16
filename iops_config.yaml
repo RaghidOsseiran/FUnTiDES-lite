@@ -54,7 +54,9 @@ vars:
 
   snapshot_arg_folder:
     type: str
-    expr: "{{ execution_dir }}/snapshots/"
+    sweep:
+      mode: list 
+      values: ["{{ execution_dir }}/snapshots/"]
     when : "use_snapshot"
     default: ""
 
