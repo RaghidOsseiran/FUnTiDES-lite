@@ -23,33 +23,54 @@ benchmark:
   cache_file: "./iops_cache.db"
 
 vars:
-  n_iterations:
-    type: int
-    sweep:
-      mode: list
-      values: [1]
 
+  # SEMPROXY variables
   size:
     type: int
     sweep: 
       mode: list
       values: [1]
 
-  with_cuda:
+  # SNAPSHOTS configs
+  use_snapshot:
     type: bool
     sweep:
       mode: list
-      values: [True]
+      values: [true]
 
-  # Output file for IOR JSON summary
+  snapshot_mode:
+    type: str
+    sweep:
+      mode: list
+      values: ["csv"] # csv, binary
+
+  snapshot_header:
+    type: str
+    sweep:
+      mode: list
+      values: ["--snapshots-use-headers"]
+    when: "use_snapshot"
+    default: ""
+
+  snapshot_arg_folder:
+    type: str
+    expr: "{{ execution_dir }}/snapshots/"
+    when : "use_snapshot"
+    default: ""
+
+  # STDIN
   summary_file:
     type: str
     expr: "{{ execution_dir }}/output.txt"
 
 command:
   template: >
+    {% if use_snapshot %}
+    semproxy {% if snapshot_mode == "csv" %} --snapshots-use-csv {% else %} --use-snapshots {% endif %} {{ snapshot_header }} --snapshots-folder {{ snapshot_arg_folder }}
+    {% else %}
     semproxy
-
+    {% endif %} 
+    
 scripts:
   - name: "FUnTIDES-lite"
     script_template: |
