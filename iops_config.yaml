@@ -23,7 +23,6 @@ benchmark:
   cache_file: "./iops_cache.db"
 
 vars:
-  # Total MPI tasks
   n_iterations:
     type: int
     sweep:
@@ -36,7 +35,6 @@ vars:
       mode: list
       values: [1]
 
-  # Computed block size per process
   with_cuda:
     type: bool
     sweep:
@@ -75,7 +73,7 @@ scripts:
         - name: time_total
           type: float
         - name: time_write_snapshot
-          type: float
+          type: list[float]
         - name: size_snapshot
           type: float
         - name: number_save_snapshot
@@ -89,6 +87,12 @@ scripts:
       parser_script: |
         import json
 
+        def get_sismo_size(path: str) -> int:
+          return 0
+
+        def get_snapshot_size(path: str) -> int:
+          return 0
+
         def parse(file_path: str):
           with open(file_path, "r") as f:
             
@@ -96,8 +100,7 @@ scripts:
             time_compute = None
             time_total = None
 
-            # Actual values that we can't parse
-            time_write_snapshot = None
+            time_write_snapshot = []
             size_snapshot = None
             number_save_snapshot = None
             time_write_sismos = None

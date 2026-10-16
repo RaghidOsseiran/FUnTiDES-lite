@@ -175,8 +175,14 @@ void SEMproxy::run()
       }
     }
 
-    if (is_snapshots_)
+    if (is_snapshots_){
+      time_point<system_clock> startSaveSnapshotTime = system_clock::now();
       saveSnapshot(indexTimeSample);
+      time_point<system_clock> endSaveSnapshotTime = system_clock::now();
+      cout << "Elapsed Saving Snapshot Time : "
+       << (endSaveSnapshotTime - startSaveSnapshotTime).count() / 1E9 << " seconds."
+       << endl;
+    }
 
     // Save pressure at receiver
     const int order = m_mesh->getOrder();
@@ -479,6 +485,8 @@ void SEMproxy::saveSeismograms(void)
   }
 
   out.close();
+
+  cout << "Sismo save successfully at : " << (output_directory / "seismogram_recording.csv") << endl;
 }
 
 int SEMproxy::getSeismosLoC(void) {return line_of_contents_;}
@@ -509,6 +517,7 @@ void SEMproxy::saveSnapshotCsv(int timestep) {
         << m_mesh->nodeCoord(i, 2) << ';' << '\n';
     }
   }
+  cout << "Snapshot save successfully at : " << (snap_folder_ + "/./snap-" + std::to_string(timestep) + ".csv") << endl;
 }
 
 void SEMproxy::saveSnapshotBin(int timestep) {
@@ -541,6 +550,8 @@ void SEMproxy::saveSnapshotBin(int timestep) {
   }
 
   file.close();
+
+  cout << "Snapshot save successfully at : " << (snap_folder_ + "/./snap-" + std::to_string(timestep) + ".dat") << endl;
 }
 
 void SEMproxy::saveSnapshot(int timestep) {
