@@ -16,6 +16,7 @@ class SemProxyOptions
   std::string implem = "makutu";  // makutu|shiva
   std::string method = "sem";     // sem|dg
   std::string mesh = "cartesian";
+  std::string receiver_positions_file = "";
   float dt = 0.001;
   float timemax = 1.5;
   bool autodt = false;
@@ -34,6 +35,8 @@ class SemProxyOptions
       throw std::runtime_error("ex/ey/ez must be > 0");
     if (lx <= 0 || ly <= 0 || lz <= 0)
       throw std::runtime_error("lx/ly/lz must be > 0");
+    if (!receiver_positions_file.empty() && !ifstream(receiver_positions_file))
+      throw std::runtime_error("The file does not exist");
   }
 
   // Bind CLI flags to this instance (no --help here)
@@ -71,6 +74,8 @@ class SemProxyOptions
         "Boolean to tell if the model is charged on nodes (true) or on element "
         "(false)",
         cxxopts::value<bool>(o.isModelOnNodes))(
-        "is-elastic", "Elastic simulation", cxxopts::value<bool>(o.isElastic));
+        "is-elastic", "Elastic simulation", cxxopts::value<bool>(o.isElastic))(
+        "receiver-positions-file", "Receivers' positions",
+        cxxopts::value<std::string>(o.receiver_positions_file));
   }
 };
