@@ -74,6 +74,8 @@ class SEMproxy
    */
   float find_cfl_dt(float cfl_factor);
 
+  void saveSnapshotCsv(int timestep);
+  void saveSnapshotBin(int timestep);
   void saveSnapshot(int timestep);
 
   void saveSeismograms(void);
@@ -95,6 +97,8 @@ class SEMproxy
   bool is_snapshots_;
   int snap_time_interval_;
   std::string snap_folder_;
+  bool snap_use_csv_ = 0;
+  bool snap_use_header_ = 0;
 
   // sismos
   std::ifstream receiver_positions_stream_;

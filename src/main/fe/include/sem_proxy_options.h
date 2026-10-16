@@ -3,6 +3,8 @@
 #include <cxxopts.hpp>
 #include <stdexcept>
 #include <string>
+#include <filesystem>
+#include <fstream>
 
 class SemProxyOptions
 {
@@ -28,6 +30,12 @@ class SemProxyOptions
   bool isModelOnNodes = false;
   bool isElastic = false;
 
+  bool useSnapshots = false;
+  int snapshotsInterval = 10;
+  std::string snapshotsFolder = ".";
+  bool snapshotsUseCSV = 0;
+  bool snapshotsUseHeaders = 0;
+
   void validate() const
   {
     if (order < 1) throw std::runtime_error("order must be >= 1");
@@ -35,8 +43,14 @@ class SemProxyOptions
       throw std::runtime_error("ex/ey/ez must be > 0");
     if (lx <= 0 || ly <= 0 || lz <= 0)
       throw std::runtime_error("lx/ly/lz must be > 0");
-    if (!receiver_positions_file.empty() && !ifstream(receiver_positions_file))
+    if (!receiver_positions_file.empty() && !std::ifstream(receiver_positions_file))
       throw std::runtime_error("The file does not exist");
+
+    if (useSnapshots) {
+      if (useSnapshots &&
+        !(std::filesystem::exists(snapshotsFolder) && std::filesystem::is_directory(snapshotsFolder)))
+        throw std::runtime_error("snapshot folder is incorrect");
+    }
   }
 
   // Bind CLI flags to this instance (no --help here)
@@ -76,6 +90,11 @@ class SemProxyOptions
         cxxopts::value<bool>(o.isModelOnNodes))(
         "is-elastic", "Elastic simulation", cxxopts::value<bool>(o.isElastic))(
         "receiver-positions-file", "Receivers' positions",
-        cxxopts::value<std::string>(o.receiver_positions_file));
+        cxxopts::value<std::string>(o.receiver_positions_file))
+        ("use-snapshots", "Create snapshots of the simulation", cxxopts::value<bool>(o.useSnapshots))
+        ("snapshots-interval", "Number of simulation steps between each snapshots", cxxopts::value<int>(o.snapshotsInterval))
+        ("snapshots-folder", "Folder where the snapshots are stored", cxxopts::value<std::string>(o.snapshotsFolder))
+        ("snapshots-use-headers", "Use headers for the snapshots points", cxxopts::value<bool>(o.snapshotsUseHeaders))
+        ("snapshots-use-csv", "Use csv for the snapshots format", cxxopts::value<bool>(o.snapshotsUseCSV));
   }
 };
