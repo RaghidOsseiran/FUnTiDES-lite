@@ -148,7 +148,7 @@ scripts:
                     size_snapshot = get_snapshot_size( {{ snapshot_path }} )
               elif "Sismo save successfully at :" in line:
                   sismos_path = line.split("Sismo save successfully at :")[1]
-                  size_sismos = get_sismo_size( {{execution_dir}} + "/" + sismos_path)
+                  size_sismos = get_sismo_size(f"{ {{ execution_dir }} }/{sismos_path}")
 
           return {"time_init"    : time_init,
                   "time_compute" : time_compute,
