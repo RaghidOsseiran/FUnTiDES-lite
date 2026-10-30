@@ -54,6 +54,7 @@ SEMproxy::SEMproxy(const SemProxyOptions& opt)
   bool isElastic = isElastic_;
 
   loadReceiverPositions(opt.receiver_positions_file);
+  seismograms_data_folder_ = opt.seismogramsFolder;
   is_snapshots_ = opt.useSnapshots;
   snap_time_interval_ = opt.snapshotsInterval;
   snap_folder_ = opt.snapshotsFolder;
@@ -151,8 +152,8 @@ SEMproxy::SEMproxy(const SemProxyOptions& opt)
 
 void SEMproxy::run()
 {
-  time_point<system_clock> startComputeTime, startOutputTime, totalComputeTime,
-      totalOutputTime;
+  time_point<system_clock> startComputeTime, startOutputTime, startSeismoTime, totalComputeTime,
+      totalOutputTime, totalSeismoTime;
 
   SEMsolverDataAcoustic solverData(i1, i2, myRHSTerm, pnGlobal, rhsElement,
                                    rhsWeights);
@@ -168,16 +169,14 @@ void SEMproxy::run()
 
     if (indexTimeSample % 50 == 0)
     {
-      for (int i = 0; i < rcv_coords_.size(); ++i)
-      {
-        m_solver->outputSolutionValues(indexTimeSample, i1, rhsElementRcv[i],
+        m_solver->outputSolutionValues(indexTimeSample, i1, rhsElement[0],
                                        pnGlobal, "pnGlobal");
-      }
     }
 
     if (is_snapshots_)
       saveSnapshot(indexTimeSample);
 
+    startSeismoTime = system_clock::now();
     // Save pressure at receiver
     const int order = m_mesh->getOrder();
     for (int p = 0; p < rcv_coords_.size(); ++p)
@@ -200,6 +199,7 @@ void SEMproxy::run()
 
       pnAtReceiver(p, indexTimeSample) = varnp1;
     }
+    totalSeismoTime += system_clock::now() -startSeismoTime; 
 
     swap(i1, i2);
 
@@ -215,9 +215,14 @@ void SEMproxy::run()
                             .count();
   float outputtime_ms =
       time_point_cast<microseconds>(totalOutputTime).time_since_epoch().count();
+  float seismotime_ms = time_point_cast<microseconds>(totalSeismoTime)
+                            .time_since_epoch()
+                            .count();
 
   cout << "------------------------------------------------ " << endl;
   cout << "\n---- Elapsed Kernel Time : " << kerneltime_ms / 1E6 << " seconds."
+       << endl;
+  cout << "---- Elapsed Recording Seismos Time : " << seismotime_ms / 1E6 << " seconds."
        << endl;
   cout << "---- Elapsed Output Time : " << outputtime_ms / 1E6 << " seconds."
        << endl;
@@ -386,12 +391,20 @@ void SEMproxy::loadReceiverPositions(string filepath)
   std::string line;
   while (std::getline(receiver_positions_stream_, line))
   {
-    if ((line == "id,x,y,z") || line.empty()) continue;
+    if (!line.empty() && line.back() == '\r') line.pop_back();
+    if (line.empty() || line.rfind("id", 0) == 0 ) continue;
+
     int idRcv;
     float rcv_x, rcv_y, rcv_z;
     if (std::sscanf(line.c_str(), "%d,%f,%f,%f\n", &idRcv, &rcv_x, &rcv_y,
                     &rcv_z) != 4)
       throw std::runtime_error("Wrong format in file");
+
+    if ((rcv_x < 0 || rcv_x >= domain_size_[0]) ||
+        (rcv_y < 0 || rcv_y >= domain_size_[1]) || 
+        (rcv_z < 0 || rcv_z >= domain_size_[2]))
+      throw std::runtime_error("Receiver " + std::to_string(idRcv) + " is outside the domain");
+
     rcv_coords_.push_back(
         std::pair<int, std::array<float, 3>>{idRcv, {rcv_x, rcv_y, rcv_z}});
   }
@@ -438,9 +451,8 @@ float SEMproxy::find_cfl_dt(float cfl_factor)
 
 void SEMproxy::saveSeismograms(void)
 {
-  seismograms_data_folder_ = "seismograms_data";
   std::filesystem::path output_directory(seismograms_data_folder_);
-  bool create = std::filesystem::create_directory(output_directory);
+  bool create = std::filesystem::create_directories(output_directory);
   if (!std::filesystem::is_directory(seismograms_data_folder_))
     throw std::runtime_error("Path exists but it is not a directory");
 
@@ -479,9 +491,11 @@ void SEMproxy::saveSeismograms(void)
   }
 
   out.close();
+  std::cout <<  "Sismo save successfully at : " 
+            << std::filesystem::absolute(output_directory / "seismogram_recording.csv")
+            << std::endl;
 }
 
-int SEMproxy::getSeismosLoC(void) {return line_of_contents_;}
 void SEMproxy::saveSnapshotCsv(int timestep) {
   std::ofstream file(snap_folder_ + "/./snap-" + std::to_string(timestep) + ".csv");
 

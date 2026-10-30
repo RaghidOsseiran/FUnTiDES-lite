@@ -36,6 +36,9 @@ class SemProxyOptions
   bool snapshotsUseCSV = 0;
   bool snapshotsUseHeaders = 0;
 
+  std::string seismogramsFolder = "seismograms_recording";
+
+
   void validate() const
   {
     if (order < 1) throw std::runtime_error("order must be >= 1");
@@ -90,7 +93,9 @@ class SemProxyOptions
         cxxopts::value<bool>(o.isModelOnNodes))(
         "is-elastic", "Elastic simulation", cxxopts::value<bool>(o.isElastic))(
         "receiver-positions-file", "Receivers' positions",
-        cxxopts::value<std::string>(o.receiver_positions_file))
+        cxxopts::value<std::string>(o.receiver_positions_file))(
+        "seismograms-folder", "Folder where the seismograms recording are stored", cxxopts::value<std::string>(o.seismogramsFolder)
+        )
         ("use-snapshots", "Create snapshots of the simulation", cxxopts::value<bool>(o.useSnapshots))
         ("snapshots-interval", "Number of simulation steps between each snapshots", cxxopts::value<int>(o.snapshotsInterval))
         ("snapshots-folder", "Folder where the snapshots are stored", cxxopts::value<std::string>(o.snapshotsFolder))
