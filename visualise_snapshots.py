@@ -51,8 +51,15 @@ of the proxy are understood (FMT, auto-detected by default):
   csv-header   snap-<step>.csv  one p per line       + headers.csv ("x;y;z;")
   fake         snapshots/pnGlobal_step*.csv + metadata.json (generate_fake_data.py)
 
-Seismograms are looked for in DIR, DIR/seismos and DIR/seismograms_data, as
-written by the proxy (seismogram_recording.csv: traces + receiver coordinates)
+Seismograms are looked for in DIR, DIR/seismos, DIR/seismograms_recording and
+DIR/seismograms_data (or --seismos), as written by the proxy in
+seismogram_recording.csv (columns step,time,rcv_<id>...), either
+  inline   receiver coordinates repeated on every row (rcv_<id>_x/_y/_z)
+  header   no coordinate columns; the coordinates are in a separate CSV with
+           columns x,y,z (+ optional id), found next to it or given with
+           --seismos-header. The proxy (--seismo-use-header) writes it as
+           headers.csv, first line "id,x,y,z", one row per receiver in the
+           order of the seismogram columns
 or by generate_fake_data.py (seismograms.csv + receivers.csv). They are optional.
 
 The proxy writes no metadata, so dt comes from the seismograms (or --dt) and
@@ -341,20 +348,131 @@ class Slices:
         return p
 
 
-def find_seismograms(root, folder=None):
-    """Return (time, traces[nt, nrcv], receivers[nrcv, 3], ids) or None."""
-    dirs = [folder] if folder else [root, root / "seismos", root / "seismograms_data"]
+SEISMO_FILE = "seismogram_recording.csv"
+# names tried first for the receiver coordinates of the header format
+SEISMO_HEADER_NAMES = ("seismogram_headers.csv", "seismogram_header.csv",
+                       "receivers_headers.csv", "receivers.csv")
+
+
+PROXY_SEISMO_HEADER = "headers.csv"  # <seismograms-folder>/headers.csv (--seismo-use-header)
+
+
+def is_proxy_seismo_header(path):
+    """True for the receiver file written by the proxy with --seismo-use-header
+    (first line exactly "id,x,y,z"). Only the first line is read, so a large
+    snapshot headers.csv ("x;y;z") in the same folder is never scanned."""
+    try:
+        with path.open() as f:
+            return f.readline().strip().lower() == "id,x,y,z"
+    except OSError:
+        return False
+
+
+def _rcv_key(name):
+    """'rcv_3' / '3' -> '3': receiver ids as written in either file."""
+    s = str(name).strip()
+    return s[4:] if s.startswith("rcv_") else s
+
+
+def read_receiver_header(path):
+    """Receiver coordinates file of the header format: a first line naming the
+    columns, then one row per receiver. Needs columns x, y, z; an id column
+    (id / rcv / receiver / rcv_id / receiver_id) is optional. Separator ',' or
+    ';' (trailing separators allowed). Returns ({id: xyz}, [xyz in file order])
+    or None when the file does not look like that."""
+    with path.open() as f:
+        first = f.readline()
+    sep = ";" if first.count(";") > first.count(",") else ","
+    head = [h.strip().lower() for h in first.split(sep)]
+    if not {"x", "y", "z"} <= set(head):
+        return None
+    idcol = next((head.index(c) for c in ("id", "rcv", "receiver", "rcv_id", "receiver_id")
+                  if c in head), None)
+    ix, iy, iz = (head.index(c) for c in "xyz")
+    by_id, ordered = {}, []
+    for line in path.read_text().splitlines()[1:]:
+        if not line.strip():
+            continue
+        f = [v.strip() for v in line.split(sep)]
+        xyz = (float(f[ix]), float(f[iy]), float(f[iz]))
+        ordered.append(xyz)
+        if idcol is not None:
+            by_id[_rcv_key(f[idcol])] = xyz
+    return by_id, ordered
+
+
+def receiver_coords(folder, ids, header=None):
+    """Coordinates of receivers `ids` for the header format (coordinates not
+    repeated in seismogram_recording.csv). Uses `header` (--seismos-header) if
+    given, else the proxy's headers.csv (see is_proxy_seismo_header), else the
+    first small CSV of `folder` with x, y, z columns, names in
+    SEISMO_HEADER_NAMES first. Rows of the proxy's file are matched in column
+    order; other files by id when they have an id column, else in order.
+    Receivers left without coordinates get NaN: their traces are still shown,
+    but they are not drawn on the slice."""
+    if header is not None:
+        candidates = [header]
+    else:
+        proxy = folder / PROXY_SEISMO_HEADER
+        named = [folder / n for n in SEISMO_HEADER_NAMES]
+        others = sorted(q for q in folder.glob("*.csv")
+                        if q.name != SEISMO_FILE and q not in named
+                        and not q.name.startswith("snap-") and q.name != "headers.csv"
+                        and q.stat().st_size < 1_000_000)  # never scan snapshot files
+        candidates = (([proxy] if is_proxy_seismo_header(proxy) else [])
+                      + [q for q in named if q.exists()] + others)
+    for q in candidates:
+        try:
+            parsed = read_receiver_header(q)
+        except (OSError, ValueError, IndexError):
+            parsed = None
+        if not parsed:
+            continue
+        by_id, ordered = parsed
+        if is_proxy_seismo_header(q):
+            # The proxy writes one row per receiver in the order of the
+            # seismogram columns, but its id column is the receiver's index
+            # (0..n-1), not the id of the positions file: match in order.
+            if len(ordered) != len(ids):
+                continue
+            if list(by_id) != [_rcv_key(r) for r in ids]:
+                print(f"note: the ids of {q.name} (receiver index) differ from the "
+                      "seismogram's receiver ids; rows matched in column order")
+            print(f"receiver coordinates: {q.name} (proxy header, matched in column order)")
+            return np.array(ordered, float)
+        if by_id and all(_rcv_key(r) in by_id for r in ids):
+            print(f"receiver coordinates: {q.name} (matched by id)")
+            return np.array([by_id[_rcv_key(r)] for r in ids], float)
+        if len(ordered) == len(ids):
+            print(f"receiver coordinates: {q.name} (no id column: matched in file order)")
+            return np.array(ordered, float)
+    where = header if header is not None else folder
+    print(f"receiver coordinates: none found in {where} (traces shown, receivers not drawn)")
+    return np.full((len(ids), 3), np.nan)
+
+
+def find_seismograms(root, folder=None, header=None):
+    """Return (time, traces[nt, nrcv], receivers[nrcv, 3], ids) or None.
+
+    Proxy formats (seismogram_recording.csv, columns step,time,rcv_<id>...):
+      inline  the coordinates are repeated on every row, rcv_<id>_x/_y/_z
+      header  no coordinate columns; they are in a separate CSV (see
+              receiver_coords), written once
+    """
+    dirs = ([folder] if folder else
+            [root, root / "seismos", root / "seismograms_recording", root / "seismograms_data"])
     for d in dirs:
-        # proxy format: step,time,rcv_<id>...,rcv_<id>_x,rcv_<id>_y,rcv_<id>_z...
-        f = d / "seismogram_recording.csv"
+        f = d / SEISMO_FILE
         if f.exists():
-            names = f.open().readline().strip().split(",")
+            names = [n.strip() for n in f.open().readline().strip().split(",")]
             data = np.loadtxt(f, delimiter=",", skiprows=1, ndmin=2)
             col = {n: k for k, n in enumerate(names)}
             ids = [m.group(1) for n in names if (m := re.fullmatch(r"rcv_([^_]+)", n))]
             traces = data[:, [col[f"rcv_{r}"] for r in ids]]
-            rcv = np.array([[data[0, col[f"rcv_{r}_{c}"]] if f"rcv_{r}_{c}" in col else np.nan
-                             for c in "xyz"] for r in ids])
+            if ids and all(f"rcv_{r}_{c}" in col for r in ids for c in "xyz"):
+                rcv = np.array([[data[0, col[f"rcv_{r}_{c}"]] for c in "xyz"] for r in ids])
+            else:
+                rcv = receiver_coords(d, ids, header)
             return data[:, col["time"]], traces, rcv, ids
         # generate_fake_data.py format: seismograms.csv + receivers.csv
         f, r = d / "seismograms.csv", d / "receivers.csv"
@@ -370,7 +488,7 @@ class Run:
     viewer needs."""
 
     def __init__(self, root, fmt="auto", dtype="auto", seismos=None,
-                 dt=None, source=None, vp=None, f0=None, slices=False):
+                 dt=None, source=None, vp=None, f0=None, slices=False, seismos_header=None):
         self.root = root
         self.is_slice = slices
         self.snaps = Slices(root) if slices else Snapshots(root, fmt, dtype)
@@ -379,13 +497,17 @@ class Run:
         self.bounds = self.snaps.bounds
         self.steps = self.snaps.steps
 
-        seis = find_seismograms(root, seismos)
+        seis = find_seismograms(root, seismos, seismos_header)
         if seis is None:
             self.seis_time = self.seis = None
             self.receivers = np.empty((0, 3))
             self.rcv_ids = []
         else:
             self.seis_time, self.seis, self.receivers, self.rcv_ids = seis
+            known = np.isfinite(self.receivers).all(axis=1)
+            if not known.all():
+                print(f"{(~known).sum()} receiver(s) without coordinates: not drawn on the slice")
+            self.receivers = self.receivers[known]  # only used to draw the dots
 
         # explicit option > metadata.json > seismogram time axis > proxy default
         if dt is None:
@@ -1053,6 +1175,9 @@ def main():
     ap.add_argument("--dtype", default="auto", choices=["auto", "<f4", "<f8"],
                     help="float type of binary files (float64 if built with USE_DOUBLE)")
     ap.add_argument("--seismos", type=Path, help="directory of the seismogram files")
+    ap.add_argument("--seismos-header", type=Path,
+                    help="receiver coordinates file of the seismogram header format "
+                         "(default: looked for next to seismogram_recording.csv)")
     ap.add_argument("--dt", type=float, help="time step (s), to convert steps to times")
     ap.add_argument("--source", type=float, nargs=3, metavar=("X", "Y", "Z"),
                     help=f"source position (default {PROXY_DEFAULTS['source']})")
@@ -1088,7 +1213,8 @@ def main():
         return
     root = resolve_run(args.data, args.format, args.slices)
     run = Run(root, args.format, args.dtype, args.seismos,
-              args.dt, args.source, args.vp, args.f0, slices=args.slices)
+              args.dt, args.source, args.vp, args.f0, slices=args.slices,
+              seismos_header=args.seismos_header)
     if args.benchmark:
         z = args.z
         if z is None and not args.slices:
