@@ -596,7 +596,7 @@ void SEMproxy::saveSeismograms(void)
     if (!coords_file) throw std::runtime_error("Cannot open the file");
     coords_file << "id,x,y,z" << std::endl;
     for (int rcv = 0; rcv < rcv_coords_.size(); ++rcv)
-      coords_file << rcv << ',' << rcv_coords_[rcv].second[0] << ',' << rcv_coords_[rcv].second[1]
+      coords_file << rcv_coords_[rcv].first << ',' << rcv_coords_[rcv].second[0] << ',' << rcv_coords_[rcv].second[1]
           << ',' << rcv_coords_[rcv].second[2] << std::endl;
     coords_file.close();
 
