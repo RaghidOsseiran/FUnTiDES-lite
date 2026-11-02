@@ -61,6 +61,10 @@ SEMproxy::SEMproxy(const SemProxyOptions& opt)
   snap_use_csv_ = opt.snapshotsUseCSV;
   snap_use_header_ = opt.snapshotsUseHeaders;
 
+  in_situ_interval = opt.inSituInterval;
+  in_situ_stats_ = opt.inSituStats;
+  in_situ_active_ = in_situ_stats_;
+
   const SolverFactory::methodType methodType = getMethod(opt.method);
   const SolverFactory::implemType implemType = getImplem(opt.implem);
   const SolverFactory::meshType meshType = getMesh(opt.mesh);
@@ -200,6 +204,9 @@ void SEMproxy::run()
       pnAtReceiver(p, indexTimeSample) = varnp1;
     }
     totalSeismoTime += system_clock::now() -startSeismoTime; 
+
+    if (in_situ_active_)
+      computeInSitu(indexTimeSample);
 
     swap(i1, i2);
 
@@ -568,4 +575,31 @@ void SEMproxy::saveSnapshot(int timestep) {
   } else {
     saveSnapshotBin(timestep);
   }
+}
+
+void SEMproxy::computeInSitu(int timestep) {
+  if (timestep % in_situ_interval != 0)
+    return;
+  in_situ_k_++;
+  auto lambda = KOKKOS_LAMBDA(const int i, real_t& min, real_t & max, real_t& sum) {
+    const real_t val = pnGlobal(i, i1);
+    min = std::min(min, val);
+    max = std::max(max, val);
+    sum += val;
+  };
+
+  const int size = m_mesh->getNumberOfNodes();
+
+  real_t sum = 0, max = 0, min = 0;
+  Kokkos::parallel_reduce("inSitu", size, lambda, min, max, sum);
+  Kokkos::fence();
+
+  sum /= m_mesh->getNumberOfNodes();
+
+  auto K = (timestep - 1) * in_situ_k_;
+  /* update old mean and add new elements -> (in_situ_mean / nb_node) + (new elements)/total_nb_node */
+  in_situ_mean_ = in_situ_k_ == 1 ? sum / m_mesh->getNumberOfNodes(): (in_situ_mean_  + (sum / K)) / m_mesh->getNumberOfNodes();
+  std::cout <<
+    "[local]mean: " << in_situ_mean_ << ", [local]min: " << min << ", [local]max: " << max <<
+    " [global]mean: " << in_situ_mean_ << ", [global]min: " << min << ", [global]max: " << max << std::endl;
 }
