@@ -102,7 +102,7 @@ class SEMproxy
   bool snap_use_header_ = 0;
 
   // in-situ
-  size_t in_situ_interval = 0;
+  size_t in_situ_interval_ = 0;
   size_t in_situ_k_ = 0; /* Number of iterations passed in in-situ */
   bool in_situ_active_ = false;
   bool in_situ_stats_ = false;

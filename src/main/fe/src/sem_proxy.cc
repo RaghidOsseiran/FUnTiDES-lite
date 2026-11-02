@@ -61,7 +61,7 @@ SEMproxy::SEMproxy(const SemProxyOptions& opt)
   snap_use_csv_ = opt.snapshotsUseCSV;
   snap_use_header_ = opt.snapshotsUseHeaders;
 
-  in_situ_interval = opt.inSituInterval;
+  in_situ_interval_ = opt.inSituInterval;
   in_situ_stats_ = opt.inSituStats;
   in_situ_active_ = in_situ_stats_;
 
@@ -157,7 +157,7 @@ SEMproxy::SEMproxy(const SemProxyOptions& opt)
 void SEMproxy::run()
 {
   time_point<system_clock> startComputeTime, startOutputTime, startSeismoTime, totalComputeTime,
-      totalOutputTime, totalSeismoTime;
+      totalOutputTime, totalSeismoTime, startInSituTime, totalInSituTime;
 
   SEMsolverDataAcoustic solverData(i1, i2, myRHSTerm, pnGlobal, rhsElement,
                                    rhsWeights);
@@ -203,10 +203,13 @@ void SEMproxy::run()
 
       pnAtReceiver(p, indexTimeSample) = varnp1;
     }
-    totalSeismoTime += system_clock::now() -startSeismoTime; 
+    totalSeismoTime += system_clock::now() -startSeismoTime;
 
-    if (in_situ_active_)
+    if (in_situ_active_) {
+      startInSituTime = system_clock::now();
       computeInSitu(indexTimeSample);
+      totalInSituTime += system_clock::now() - startInSituTime;
+    }
 
     swap(i1, i2);
 
@@ -226,12 +229,17 @@ void SEMproxy::run()
                             .time_since_epoch()
                             .count();
 
+  float insitutime_ms =
+      time_point_cast<microseconds>(totalInSituTime).time_since_epoch().count();
+
   cout << "------------------------------------------------ " << endl;
   cout << "\n---- Elapsed Kernel Time : " << kerneltime_ms / 1E6 << " seconds."
        << endl;
   cout << "---- Elapsed Recording Seismos Time : " << seismotime_ms / 1E6 << " seconds."
        << endl;
   cout << "---- Elapsed Output Time : " << outputtime_ms / 1E6 << " seconds."
+       << endl;
+  cout << "---- Elapsed In Situ Time : " << insitutime_ms / 1E6 << " seconds."
        << endl;
   cout << "------------------------------------------------ " << endl;
 }
@@ -408,7 +416,7 @@ void SEMproxy::loadReceiverPositions(string filepath)
       throw std::runtime_error("Wrong format in file");
 
     if ((rcv_x < 0 || rcv_x >= domain_size_[0]) ||
-        (rcv_y < 0 || rcv_y >= domain_size_[1]) || 
+        (rcv_y < 0 || rcv_y >= domain_size_[1]) ||
         (rcv_z < 0 || rcv_z >= domain_size_[2]))
       throw std::runtime_error("Receiver " + std::to_string(idRcv) + " is outside the domain");
 
@@ -498,7 +506,7 @@ void SEMproxy::saveSeismograms(void)
   }
 
   out.close();
-  std::cout <<  "Sismo save successfully at : " 
+  std::cout <<  "Sismo save successfully at : "
             << std::filesystem::absolute(output_directory / "seismogram_recording.csv")
             << std::endl;
 }
@@ -527,7 +535,7 @@ void SEMproxy::saveSnapshotCsv(int timestep) {
       file
         << m_mesh->nodeCoord(i, 0) << ';'
         << m_mesh->nodeCoord(i, 1) << ';'
-        << m_mesh->nodeCoord(i, 2) << ';' 
+        << m_mesh->nodeCoord(i, 2) << ';'
         << pnGlobal(i, i1)         << ';'
         << '\n';
     }
@@ -578,8 +586,9 @@ void SEMproxy::saveSnapshot(int timestep) {
 }
 
 void SEMproxy::computeInSitu(int timestep) {
-  if (timestep % in_situ_interval != 0)
+  if (timestep % in_situ_interval_ != 0)
     return;
+
   in_situ_k_++;
   const int size = m_mesh->getNumberOfNodes();
   auto lambda = KOKKOS_LAMBDA(const int i, real_t& min, real_t & max, real_t& mean) {
@@ -588,7 +597,6 @@ void SEMproxy::computeInSitu(int timestep) {
     max = std::max(max, val);
     mean += val / size;
   };
-
 
   real_t mean = 0, ma = 0, mi = 0;
   Kokkos::parallel_reduce("inSitu", size, lambda, mi, ma, mean);
