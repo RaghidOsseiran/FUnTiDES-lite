@@ -274,3 +274,8 @@ receiver.dat
 
 *.err
 benchmark_comparison.png
+
+# IOPS Benchmark untracked
+iops_cache.db
+iops.log
+benchmarks
