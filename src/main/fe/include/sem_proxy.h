@@ -104,7 +104,7 @@ class SEMproxy
   std::ifstream receiver_positions_stream_;
   std::string seismograms_data_folder_;
   std::vector<std::pair<int, std::array<float, 3>>> rcv_coords_ = {};
-  int line_of_contents_;
+  bool seismo_use_header_ = 0;
 
   // physics
   bool isElastic_;

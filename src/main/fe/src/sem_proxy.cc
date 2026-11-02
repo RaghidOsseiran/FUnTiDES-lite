@@ -55,6 +55,7 @@ SEMproxy::SEMproxy(const SemProxyOptions& opt)
 
   loadReceiverPositions(opt.receiver_positions_file);
   seismograms_data_folder_ = opt.seismogramsFolder;
+  seismo_use_header_ = opt.seismoUseHeader;
   is_snapshots_ = opt.useSnapshots;
   snap_time_interval_ = opt.snapshotsInterval;
   snap_folder_ = opt.snapshotsFolder;
@@ -458,36 +459,64 @@ void SEMproxy::saveSeismograms(void)
 
   std::ofstream out(output_directory / "seismogram_recording.csv");
   if (!out) throw std::runtime_error("Cannot open the file");
-  line_of_contents_ = 0;
-  out << "step,time";
 
-  for (int rcv = 0; rcv < rcv_coords_.size(); ++rcv)
-    out << ",rcv_" << rcv_coords_[rcv].first;
+  if (seismo_use_header_) {
+    std::ofstream coords_file(output_directory / "headers.csv");
+    if (!coords_file) throw std::runtime_error("Cannot open the file");
+    coords_file << "id,x,y,z" << std::endl;
+    for (int rcv = 0; rcv < rcv_coords_.size(); ++rcv)
+      coords_file << rcv << ',' << rcv_coords_[rcv].second[0] << ',' << rcv_coords_[rcv].second[1]
+          << ',' << rcv_coords_[rcv].second[2] << std::endl;
+    coords_file.close();
 
-  for (int rcv = 0; rcv < rcv_coords_.size(); ++rcv)
-    out << ",rcv_" << rcv_coords_[rcv].first << "_x" << ",rcv_"
-        << rcv_coords_[rcv].first << "_y" << ",rcv_" << rcv_coords_[rcv].first
-        << "_z";
-
-  out << '\n';
-
-  for (int indexTimeSample = 0; indexTimeSample < num_sample_;
+    out << "step,time";
+    for (int rcv = 0; rcv < rcv_coords_.size(); ++rcv)
+      out << ",rcv_" << rcv_coords_[rcv].first;
+    out << '\n';
+    
+    for (int indexTimeSample = 0; indexTimeSample < num_sample_;
        indexTimeSample++)
-  {
-    out << indexTimeSample << ',' << indexTimeSample * dt_;
-    for (int p = 0; p < rcv_coords_.size(); ++p)
     {
-      out << ',' << pnAtReceiver(p, indexTimeSample);
+      out << indexTimeSample << ',' << indexTimeSample * dt_;
+      for (int p = 0; p < rcv_coords_.size(); ++p)
+      {
+        out << ',' << pnAtReceiver(p, indexTimeSample);
+      }
+
+      out << '\n';
     }
 
-    for (int p = 0; p < rcv_coords_.size(); ++p)
-    {
-      out << ',' << rcv_coords_[p].second[0] << ',' << rcv_coords_[p].second[1]
-          << ',' << rcv_coords_[p].second[2];
-    }
+  } else {
+
+    out << "step,time";
+
+    for (int rcv = 0; rcv < rcv_coords_.size(); ++rcv)
+      out << ",rcv_" << rcv_coords_[rcv].first;
+
+    for (int rcv = 0; rcv < rcv_coords_.size(); ++rcv)
+      out << ",rcv_" << rcv_coords_[rcv].first << "_x" << ",rcv_"
+          << rcv_coords_[rcv].first << "_y" << ",rcv_" << rcv_coords_[rcv].first
+          << "_z";
 
     out << '\n';
-    line_of_contents_++;
+
+    for (int indexTimeSample = 0; indexTimeSample < num_sample_;
+        indexTimeSample++)
+    {
+      out << indexTimeSample << ',' << indexTimeSample * dt_;
+      for (int p = 0; p < rcv_coords_.size(); ++p)
+      {
+        out << ',' << pnAtReceiver(p, indexTimeSample);
+      }
+
+      for (int p = 0; p < rcv_coords_.size(); ++p)
+      {
+        out << ',' << rcv_coords_[p].second[0] << ',' << rcv_coords_[p].second[1]
+            << ',' << rcv_coords_[p].second[2];
+      }
+
+      out << '\n';
+    }
   }
 
   out.close();

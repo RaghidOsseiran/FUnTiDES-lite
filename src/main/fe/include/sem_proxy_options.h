@@ -37,6 +37,7 @@ class SemProxyOptions
   bool snapshotsUseHeaders = 0;
 
   std::string seismogramsFolder = "seismograms_recording";
+  bool seismoUseHeader = 0;
 
 
   void validate() const
@@ -95,6 +96,8 @@ class SemProxyOptions
         "receiver-positions-file", "Receivers' positions",
         cxxopts::value<std::string>(o.receiver_positions_file))(
         "seismograms-folder", "Folder where the seismograms recording are stored", cxxopts::value<std::string>(o.seismogramsFolder)
+        )(
+        "seismo-use-header", "Use header for the seismograms recording", cxxopts::value<bool>(o.seismoUseHeader)
         )
         ("use-snapshots", "Create snapshots of the simulation", cxxopts::value<bool>(o.useSnapshots))
         ("snapshots-interval", "Number of simulation steps between each snapshots", cxxopts::value<int>(o.snapshotsInterval))
