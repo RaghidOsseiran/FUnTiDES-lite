@@ -12,15 +12,84 @@
 #include <sem_solver_acoustic.h>
 #include <source_and_receiver_utils.h>
 
+#include <fcntl.h>
+#include <unistd.h>
+
+#include <cerrno>
+#include <chrono>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <cxxopts.hpp>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <limits>
+#include <locale>
 #include <sstream>
+#include <type_traits>
 #include <variant>
 
 using namespace SourceAndReceiverUtils;
+
+namespace
+{
+// Shortest decimal text that reads back as the same float (e.g. 0.001, not
+// 0.00100000005), with '.' as decimal separator whatever the locale.
+std::string jsonFloat(float v)
+{
+  std::string s;
+  for (int p = 6; p <= std::numeric_limits<float>::max_digits10; ++p)
+  {
+    std::ostringstream os;
+    os.imbue(std::locale::classic());
+    os << std::setprecision(p) << v;
+    s = os.str();
+    if (std::strtof(s.c_str(), nullptr) == v) break;
+  }
+  return s;
+}
+
+std::string jsonDouble(double v)
+{
+  std::ostringstream os;
+  os.imbue(std::locale::classic());
+  os << std::setprecision(std::numeric_limits<double>::max_digits10) << v;
+  return os.str();
+}
+
+std::string jsonString(const std::string& s)
+{
+  std::string out = "\"";
+  for (char c : s)
+  {
+    if (c == '"' || c == '\\')
+    {
+      out += '\\';
+      out += c;
+    }
+    else if (static_cast<unsigned char>(c) < 0x20)
+    {
+      char buf[8];
+      std::snprintf(buf, sizeof(buf), "\\u%04x", c);
+      out += buf;
+    }
+    else
+      out += c;
+  }
+  return out + "\"";
+}
+
+const char* jsonBool(bool b) { return b ? "true" : "false"; }
+
+double secondsBetween(std::chrono::steady_clock::time_point t0,
+                      std::chrono::steady_clock::time_point t1)
+{
+  return std::chrono::duration<double>(t1 - t0).count();
+}
+}  // namespace
 
 SEMproxy::SEMproxy(const SemProxyOptions& opt)
 {
@@ -61,6 +130,11 @@ SEMproxy::SEMproxy(const SemProxyOptions& opt)
   snap_folder_ = opt.snapshotsFolder;
   snap_use_csv_ = opt.snapshotsUseCSV;
   snap_use_header_ = opt.snapshotsUseHeaders;
+  is_slices_ = opt.useSlices;
+  slice_folder_ = opt.slicesFolder;
+  slice_z_req_ = opt.sliceZ;
+  sync_writes_ = opt.syncWrites;
+  opt_ = opt;
 
   const SolverFactory::methodType methodType = getMethod(opt.method);
   const SolverFactory::implemType implemType = getImplem(opt.implem);
@@ -149,6 +223,8 @@ SEMproxy::SEMproxy(const SemProxyOptions& opt)
   std::cout << "Order of approximation will be " << order << std::endl;
   std::cout << "Time step is " << dt_ << "s" << std::endl;
   std::cout << "Simulated time is " << timemax_ << "s" << std::endl;
+
+  if (is_slices_) initSlices();
 }
 
 void SEMproxy::run()
@@ -156,15 +232,31 @@ void SEMproxy::run()
   time_point<system_clock> startComputeTime, startOutputTime, startSeismoTime, totalComputeTime,
       totalOutputTime, totalSeismoTime;
 
+  // steady_clock timers for the metrics file (see RunMetrics)
+  using sclock = std::chrono::steady_clock;
+  bool previous_step_was_output = false;
+
   SEMsolverDataAcoustic solverData(i1, i2, myRHSTerm, pnGlobal, rhsElement,
                                    rhsWeights);
 
+  const sclock::time_point startLoop = sclock::now();
   for (int indexTimeSample = 0; indexTimeSample < num_sample_;
        indexTimeSample++)
   {
     startComputeTime = system_clock::now();
+    const sclock::time_point t_compute = sclock::now();
     m_solver->computeOneStep(dt_, indexTimeSample, solverData);
+    // computeOneStep ends with a fence: the GPU work of this step is done
+    const double compute_step_s = secondsBetween(t_compute, sclock::now());
     totalComputeTime += system_clock::now() - startComputeTime;
+
+    metrics_.compute_s += compute_step_s;
+    metrics_.compute_steps++;
+    if (previous_step_was_output)
+    {
+      metrics_.compute_after_output_s += compute_step_s;
+      metrics_.compute_after_output_steps++;
+    }
 
     startOutputTime = system_clock::now();
 
@@ -174,8 +266,46 @@ void SEMproxy::run()
                                        pnGlobal, "pnGlobal");
     }
 
-    if (is_snapshots_)
+    const bool is_output_step = (is_snapshots_ || is_slices_) &&
+                                indexTimeSample % snap_time_interval_ == 0;
+
+    // Slice before snapshot: the snapshot reads every node on the host, so
+    // after it the slice pages would already be host-resident and the
+    // extraction would look cheaper than in a slices-only run.
+    if (is_slices_ && is_output_step)
+    {
+      const sclock::time_point t0 = sclock::now();
+      extractSlice();
+      const sclock::time_point t1 = sclock::now();
+      writeSlice(indexTimeSample);
+      const sclock::time_point t2 = sclock::now();
+
+      metrics_.slice_extract_s += secondsBetween(t0, t1);
+      metrics_.slice_write_s += secondsBetween(t1, t2);
+      metrics_.slice_count++;
+      cout << "Elapsed Saving Slice Time : " << secondsBetween(t0, t2)
+           << " seconds." << endl;
+      metrics_.slice_bytes +=
+          std::filesystem::file_size(slicePath(indexTimeSample));
+    }
+
+    if (is_snapshots_ && is_output_step)
+    {
+      const sclock::time_point t0 = sclock::now();
       saveSnapshot(indexTimeSample);
+      const double snapshot_s = secondsBetween(t0, sclock::now());
+
+      metrics_.snapshot_write_s += snapshot_s;
+      metrics_.snapshot_count++;
+      cout << "Elapsed Saving Snapshot Time : " << snapshot_s << " seconds."
+           << endl;
+      metrics_.snapshot_bytes +=
+          std::filesystem::file_size(snapshotPath(indexTimeSample));
+      if (snap_use_header_ && indexTimeSample == 0)
+        metrics_.header_bytes +=
+            std::filesystem::file_size(snapshotHeaderPath());
+    }
+    previous_step_was_output = is_output_step;
 
     startSeismoTime = system_clock::now();
     // Save pressure at receiver
@@ -210,6 +340,7 @@ void SEMproxy::run()
 
     totalOutputTime += system_clock::now() - startOutputTime;
   }
+  metrics_.time_loop_s = secondsBetween(startLoop, sclock::now());
 
   float kerneltime_ms = time_point_cast<microseconds>(totalComputeTime)
                             .time_since_epoch()
@@ -520,20 +651,31 @@ void SEMproxy::saveSeismograms(void)
   }
 
   out.close();
-  std::cout <<  "Sismo save successfully at : " 
+  metrics_.seismo_bytes +=
+      std::filesystem::file_size(output_directory / "seismogram_recording.csv");
+  std::cout <<  "Sismo save successfully at : "
             << std::filesystem::absolute(output_directory / "seismogram_recording.csv")
             << std::endl;
 }
 
+std::string SEMproxy::snapshotPath(int timestep) const {
+  return snap_folder_ + "/./snap-" + std::to_string(timestep) +
+         (snap_use_csv_ ? ".csv" : ".dat");
+}
+
+std::string SEMproxy::snapshotHeaderPath() const {
+  return snap_folder_ + (snap_use_csv_ ? "/./headers.csv" : "/./headers.dat");
+}
+
 void SEMproxy::saveSnapshotCsv(int timestep) {
-  std::ofstream file(snap_folder_ + "/./snap-" + std::to_string(timestep) + ".csv");
+  std::ofstream file(snapshotPath(timestep));
 
   if (snap_use_header_) {
     for (size_t i = 0; i < m_mesh->getNumberOfNodes(); i++)
       file << pnGlobal(i, i1) << '\n';
 
     if(timestep == 0) {
-      std::ofstream header_file (snap_folder_ + "/./headers.csv");
+      std::ofstream header_file (snapshotHeaderPath());
       header_file << "x;y;z\n";
       for (size_t i = 0; i < m_mesh->getNumberOfNodes(); i++) {
         header_file
@@ -554,16 +696,19 @@ void SEMproxy::saveSnapshotCsv(int timestep) {
         << '\n';
     }
   }
+
+  file.close();
+  if (sync_writes_) syncFile(snapshotPath(timestep));
 }
 
 void SEMproxy::saveSnapshotBin(int timestep) {
-  std::ofstream file(snap_folder_ + "/./snap-" + std::to_string(timestep) + ".dat", ios::binary | ios::out);
+  std::ofstream file(snapshotPath(timestep), ios::binary | ios::out);
 
   if (snap_use_header_) {
     file.write((char *)&pnGlobal(0, i1), m_mesh->getNumberOfNodes() * sizeof(real_t));
 
     if(timestep == 0) {
-      std::ofstream header_file (snap_folder_ + "/./headers.dat", ios::binary | ios::out);
+      std::ofstream header_file (snapshotHeaderPath(), ios::binary | ios::out);
       real_t val[3];
       for (size_t i = 0; i < m_mesh->getNumberOfNodes(); i++) {
         val[0] = m_mesh->nodeCoord(i, 0);
@@ -586,6 +731,7 @@ void SEMproxy::saveSnapshotBin(int timestep) {
   }
 
   file.close();
+  if (sync_writes_) syncFile(snapshotPath(timestep));
 }
 
 void SEMproxy::saveSnapshot(int timestep) {
@@ -597,4 +743,182 @@ void SEMproxy::saveSnapshot(int timestep) {
   } else {
     saveSnapshotBin(timestep);
   }
+}
+
+std::string SEMproxy::slicePath(int timestep) const {
+  return (std::filesystem::path(slice_folder_) /
+          ("slice-" + std::to_string(timestep) + ".dat"))
+      .string();
+}
+
+// Choose the node layer, create the folder, allocate the buffer and write
+// slice-header.json. Called once from the constructor (before the time loop).
+void SEMproxy::initSlices() {
+  // slices are raw float32: check the value type of pnGlobal and the byte order
+  using value_t =
+      std::remove_cv_t<std::remove_reference_t<decltype(pnGlobal(0, 0))>>;
+  static_assert(std::is_same_v<value_t, float>,
+                "slice output assumes a float pnGlobal");
+  const std::uint32_t one = 1;
+  if (*reinterpret_cast<const unsigned char*>(&one) != 1)
+    throw std::runtime_error("slice output assumes a little-endian host");
+
+  const int nx = nb_nodes_[0];
+  const int ny = nb_nodes_[1];
+  const int nz = nb_nodes_[2];
+  const std::size_t plane = std::size_t(nx) * ny;
+  if (std::size_t(m_mesh->getNumberOfNodes()) != plane * nz)
+    throw std::runtime_error("slices: node count is not nx*ny*nz");
+
+  // nearest layer to the requested z; strict '<' keeps the lower k on a tie
+  double best_d = std::numeric_limits<double>::infinity();
+  for (int k = 0; k < nz; ++k) {
+    const double d = std::fabs(double(m_mesh->nodeCoord(int(k * plane), 2)) -
+                               double(slice_z_req_));
+    if (d < best_d) {
+      best_d = d;
+      slice_k_ = k;
+    }
+  }
+  slice_z_ = m_mesh->nodeCoord(int(slice_k_ * plane), 2);
+  cout << "Slice layer k = " << slice_k_ << ", z = " << slice_z_
+       << " m (requested " << slice_z_req_ << " m)" << endl;
+
+  std::filesystem::create_directories(slice_folder_);
+  if (!std::filesystem::is_directory(slice_folder_))
+    throw std::runtime_error("slices folder is not a directory: " +
+                             slice_folder_);
+
+  slice_buf_.assign(plane, 0.f);
+
+  const std::filesystem::path header_path =
+      std::filesystem::path(slice_folder_) / "slice-header.json";
+  std::ofstream h(header_path);
+  if (!h) throw std::runtime_error("Cannot open " + header_path.string());
+  h << "{\n"
+    << "  \"nx\": " << nx << ",\n"
+    << "  \"ny\": " << ny << ",\n"
+    << "  \"k\": " << slice_k_ << ",\n"
+    << "  \"z\": " << jsonFloat(slice_z_) << ",\n"
+    << "  \"z_requested\": " << jsonFloat(slice_z_req_) << ",\n"
+    << "  \"order\": " << m_mesh->getOrder() << ",\n"
+    << "  \"ex\": " << nb_elements_[0] << ",\n"
+    << "  \"ey\": " << nb_elements_[1] << ",\n"
+    << "  \"ez\": " << nb_elements_[2] << ",\n"
+    << "  \"interval\": " << snap_time_interval_ << ",\n"
+    << "  \"dt\": " << jsonFloat(dt_) << ",\n"
+    << "  \"dtype\": \"float32\",\n"
+    << "  \"x\": [";
+  for (int i = 0; i < nx; ++i)
+    h << (i ? ", " : "") << jsonFloat(m_mesh->nodeCoord(i, 0));
+  h << "],\n  \"y\": [";
+  for (int j = 0; j < ny; ++j)
+    h << (j ? ", " : "") << jsonFloat(m_mesh->nodeCoord(j * nx, 1));
+  h << "]\n}\n";
+  h.close();
+  if (!h) throw std::runtime_error("Cannot write " + header_path.string());
+  metrics_.header_bytes += std::filesystem::file_size(header_path);
+}
+
+// Copy layer slice_k_ of the newest time column (i1) into slice_buf_.
+// Layer k is the nodes [k*nx*ny, (k+1)*nx*ny). With LayoutLeft (CUDA build)
+// column i1 is contiguous, so this is one sequential read of that block;
+// going through the view keeps it correct for LayoutRight (CPU builds) too.
+void SEMproxy::extractSlice() {
+  const std::size_t plane = slice_buf_.size();
+  const std::size_t first = std::size_t(slice_k_) * plane;
+  for (std::size_t n = 0; n < plane; ++n)
+    slice_buf_[n] = pnGlobal(first + n, i1);
+}
+
+// Write slice_buf_ as raw float32 (x fastest, then y).
+void SEMproxy::writeSlice(int timestep) {
+  const std::string path = slicePath(timestep);
+  std::ofstream file(path, std::ios::binary | std::ios::out);
+  file.write(reinterpret_cast<const char*>(slice_buf_.data()),
+             slice_buf_.size() * sizeof(float));
+  file.close();
+  if (!file) throw std::runtime_error("Cannot write slice file " + path);
+  if (sync_writes_) syncFile(path);
+}
+
+// Force the data of an already closed file to the disk (--sync-writes).
+void SEMproxy::syncFile(const std::string& path) {
+  const int fd = ::open(path.c_str(), O_RDONLY);
+  if (fd < 0)
+    throw std::runtime_error("open " + path + " for fsync: " +
+                             std::strerror(errno));
+  if (::fsync(fd) != 0) {
+    const int err = errno;
+    ::close(fd);
+    throw std::runtime_error("fsync " + path + ": " + std::strerror(err));
+  }
+  if (::close(fd) != 0)
+    throw std::runtime_error("close " + path + ": " + std::strerror(errno));
+}
+
+void SEMproxy::writeMetrics() {
+  char host[256] = {0};
+  if (gethostname(host, sizeof(host) - 1) != 0) std::strcpy(host, "unknown");
+
+  const std::string& path = opt_.metricsFile;
+  std::ofstream out(path);
+  if (!out) throw std::runtime_error("Cannot open the metrics file " + path);
+
+  const auto& m = metrics_;
+  out << "{\n"
+      << "  \"hostname\": " << jsonString(host) << ",\n"
+      << "  \"options\": {\n"
+      << "    \"ex\": " << nb_elements_[0] << ",\n"
+      << "    \"ey\": " << nb_elements_[1] << ",\n"
+      << "    \"ez\": " << nb_elements_[2] << ",\n"
+      << "    \"order\": " << m_mesh->getOrder() << ",\n"
+      << "    \"lx\": " << jsonFloat(domain_size_[0]) << ",\n"
+      << "    \"ly\": " << jsonFloat(domain_size_[1]) << ",\n"
+      << "    \"lz\": " << jsonFloat(domain_size_[2]) << ",\n"
+      << "    \"mesh\": " << jsonString(opt_.mesh) << ",\n"
+      << "    \"implem\": " << jsonString(opt_.implem) << ",\n"
+      << "    \"method\": " << jsonString(opt_.method) << ",\n"
+      << "    \"dt\": " << jsonFloat(dt_) << ",\n"
+      << "    \"auto_dt\": " << jsonBool(opt_.autodt) << ",\n"
+      << "    \"timemax\": " << jsonFloat(timemax_) << ",\n"
+      << "    \"num_sample\": " << num_sample_ << ",\n"
+      << "    \"receivers\": " << rcv_coords_.size() << ",\n"
+      << "    \"use_snapshots\": " << jsonBool(is_snapshots_) << ",\n"
+      << "    \"snapshots_interval\": " << snap_time_interval_ << ",\n"
+      << "    \"snapshots_folder\": " << jsonString(snap_folder_) << ",\n"
+      << "    \"snapshots_format\": " << jsonString(snap_use_csv_ ? "csv" : "bin") << ",\n"
+      << "    \"snapshots_use_headers\": " << jsonBool(snap_use_header_) << ",\n"
+      << "    \"use_slices\": " << jsonBool(is_slices_) << ",\n"
+      << "    \"slices_folder\": " << jsonString(slice_folder_) << ",\n"
+      << "    \"slice_z_requested\": " << jsonFloat(slice_z_req_) << ",\n"
+      << "    \"slice_k\": " << (is_slices_ ? std::to_string(slice_k_) : "null") << ",\n"
+      << "    \"slice_z\": " << (is_slices_ ? jsonFloat(slice_z_) : "null") << ",\n"
+      << "    \"sync_writes\": " << jsonBool(sync_writes_) << ",\n"
+      << "    \"seismograms_folder\": " << jsonString(seismograms_data_folder_) << ",\n"
+      << "    \"metrics_file\": " << jsonString(path) << "\n"
+      << "  },\n"
+      << "  \"nodes\": " << m_mesh->getNumberOfNodes() << ",\n"
+      << "  \"nx\": " << nb_nodes_[0] << ",\n"
+      << "  \"ny\": " << nb_nodes_[1] << ",\n"
+      << "  \"nz\": " << nb_nodes_[2] << ",\n"
+      << "  \"time_loop_s\": " << jsonDouble(m.time_loop_s) << ",\n"
+      << "  \"compute_s\": " << jsonDouble(m.compute_s) << ",\n"
+      << "  \"compute_steps\": " << m.compute_steps << ",\n"
+      << "  \"compute_after_output_s\": " << jsonDouble(m.compute_after_output_s) << ",\n"
+      << "  \"compute_after_output_steps\": " << m.compute_after_output_steps << ",\n"
+      << "  \"snapshot_write_s\": " << jsonDouble(m.snapshot_write_s) << ",\n"
+      << "  \"snapshot_count\": " << m.snapshot_count << ",\n"
+      << "  \"slice_extract_s\": " << jsonDouble(m.slice_extract_s) << ",\n"
+      << "  \"slice_write_s\": " << jsonDouble(m.slice_write_s) << ",\n"
+      << "  \"slice_count\": " << m.slice_count << ",\n"
+      << "  \"snapshot_bytes\": " << m.snapshot_bytes << ",\n"
+      << "  \"slice_bytes\": " << m.slice_bytes << ",\n"
+      << "  \"header_bytes\": " << m.header_bytes << ",\n"
+      << "  \"seismo_bytes\": " << m.seismo_bytes << "\n"
+      << "}\n";
+  out.close();
+  if (!out) throw std::runtime_error("Cannot write the metrics file " + path);
+  std::cout << "Metrics save successfully at : "
+            << std::filesystem::absolute(path) << std::endl;
 }

@@ -14,9 +14,11 @@
 #include <solver_factory.h>
 #include <utils.h>
 
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <variant>
+#include <vector>
 
 #include "sem_proxy_options.h"
 
@@ -78,8 +80,16 @@ class SEMproxy
   void saveSnapshotBin(int timestep);
   void saveSnapshot(int timestep);
 
+  // z-slice output, two separately timed steps: copy layer k of column i1
+  // into slice_buf_, then write slice_buf_ to slice-<timestep>.dat
+  void extractSlice();
+  void writeSlice(int timestep);
+
   void saveSeismograms(void);
   int getSeismosLoC(void);
+
+  // Write timers, counts and byte totals of the run to --metrics-file
+  void writeMetrics();
 
  private:
   int i1 = 0;
@@ -99,6 +109,42 @@ class SEMproxy
   std::string snap_folder_;
   bool snap_use_csv_ = 0;
   bool snap_use_header_ = 0;
+
+  // slices
+  bool is_slices_ = false;
+  std::string slice_folder_;
+  int slice_k_ = 0;           // node layer written
+  float slice_z_ = 0;         // z of that layer
+  float slice_z_req_ = 0;     // z asked with --slice-z
+  std::vector<float> slice_buf_;  // nx*ny values, allocated once
+
+  bool sync_writes_ = false;
+  SemProxyOptions opt_;  // kept for the metrics file
+
+  // run metrics (steady_clock seconds, counts, bytes on disk)
+  struct RunMetrics
+  {
+    double time_loop_s = 0;
+    double compute_s = 0;
+    int compute_steps = 0;
+    double compute_after_output_s = 0;
+    int compute_after_output_steps = 0;
+    double snapshot_write_s = 0;
+    int snapshot_count = 0;
+    double slice_extract_s = 0;
+    double slice_write_s = 0;
+    int slice_count = 0;
+    std::uintmax_t snapshot_bytes = 0;
+    std::uintmax_t slice_bytes = 0;
+    std::uintmax_t header_bytes = 0;
+    std::uintmax_t seismo_bytes = 0;
+  } metrics_;
+
+  std::string snapshotPath(int timestep) const;
+  std::string snapshotHeaderPath() const;
+  std::string slicePath(int timestep) const;
+  void initSlices();
+  static void syncFile(const std::string& path);
 
   // sismos
   std::ifstream receiver_positions_stream_;
