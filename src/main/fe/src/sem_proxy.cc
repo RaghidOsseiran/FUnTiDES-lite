@@ -581,25 +581,26 @@ void SEMproxy::computeInSitu(int timestep) {
   if (timestep % in_situ_interval != 0)
     return;
   in_situ_k_++;
-  auto lambda = KOKKOS_LAMBDA(const int i, real_t& min, real_t & max, real_t& sum) {
+  const int size = m_mesh->getNumberOfNodes();
+  auto lambda = KOKKOS_LAMBDA(const int i, real_t& min, real_t & max, real_t& mean) {
     const real_t val = pnGlobal(i, i1);
     min = std::min(min, val);
     max = std::max(max, val);
-    sum += val;
+    mean += val / size;
   };
 
-  const int size = m_mesh->getNumberOfNodes();
 
-  real_t sum = 0, max = 0, min = 0;
-  Kokkos::parallel_reduce("inSitu", size, lambda, min, max, sum);
+  real_t mean = 0, ma = 0, mi = 0;
+  Kokkos::parallel_reduce("inSitu", size, lambda, mi, ma, mean);
   Kokkos::fence();
 
-  sum /= m_mesh->getNumberOfNodes();
-
   auto K = (timestep - 1) * in_situ_k_;
-  /* update old mean and add new elements -> (in_situ_mean / nb_node) + (new elements)/total_nb_node */
-  in_situ_mean_ = in_situ_k_ == 1 ? sum / m_mesh->getNumberOfNodes(): (in_situ_mean_  + (sum / K)) / m_mesh->getNumberOfNodes();
+  /* update old mean and add new elements */
+  in_situ_mean_ = in_situ_k_ == 1 ? mean : (in_situ_mean_ * ((real_t)K / (K + size))) + (mean * ((real_t)size / (K + size))) ;
+  in_situ_min_ = min(mi, in_situ_min_);
+  in_situ_max_ = max(ma, in_situ_max_);
+
   std::cout <<
-    "[local]mean: " << in_situ_mean_ << ", [local]min: " << min << ", [local]max: " << max <<
-    " [global]mean: " << in_situ_mean_ << ", [global]min: " << min << ", [global]max: " << max << std::endl;
+    "[local]mean: " << mean << ", [local]min: " << mi << ", [local]max: " << ma <<
+    " [global]mean: " << in_situ_mean_ << ", [global]min: " << in_situ_min_ << ", [global]max: " << in_situ_max_ << std::endl;
 }
