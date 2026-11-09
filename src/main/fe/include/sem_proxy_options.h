@@ -38,6 +38,9 @@ class SemProxyOptions
 
   std::string seismogramsFolder = "seismograms_recording";
 
+  int inSituInterval = 1;
+  bool inSituStats = false;
+  bool inSituQuart = false;
 
   void validate() const
   {
@@ -100,6 +103,11 @@ class SemProxyOptions
         ("snapshots-interval", "Number of simulation steps between each snapshots", cxxopts::value<int>(o.snapshotsInterval))
         ("snapshots-folder", "Folder where the snapshots are stored", cxxopts::value<std::string>(o.snapshotsFolder))
         ("snapshots-use-headers", "Use headers for the snapshots points", cxxopts::value<bool>(o.snapshotsUseHeaders))
-        ("snapshots-use-csv", "Use csv for the snapshots format", cxxopts::value<bool>(o.snapshotsUseCSV));
+        ("snapshots-use-csv", "Use csv for the snapshots format", cxxopts::value<bool>(o.snapshotsUseCSV))
+
+        ("ins-interval", "In situ timestep interval (default 1)", cxxopts::value<int>(o.inSituInterval))
+        ("ins-compute-stats", "Compute the stats of all values in-situ", cxxopts::value<bool>(o.inSituStats))
+        ("ins-compute-quartiles", "Compute the values of quartiles (1st, 2nd, 3rd)", cxxopts::value<bool>(o.inSituQuart))
+    ;
   }
 };
