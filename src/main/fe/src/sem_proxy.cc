@@ -19,6 +19,7 @@
 #include <iostream>
 #include <sstream>
 #include <variant>
+#include "Kokkos_Sort.hpp"
 
 using namespace SourceAndReceiverUtils;
 
@@ -62,8 +63,9 @@ SEMproxy::SEMproxy(const SemProxyOptions& opt)
   snap_use_header_ = opt.snapshotsUseHeaders;
 
   in_situ_interval_ = opt.inSituInterval;
-  in_situ_stats_ = opt.inSituStats;
-  in_situ_active_ = in_situ_stats_;
+  in_situ_compute_stats_ = opt.inSituStats;
+  in_situ_compute_quarts_ = opt.inSituQuart;
+  in_situ_active_ = in_situ_compute_stats_ | in_situ_compute_quarts_;
 
   const SolverFactory::methodType methodType = getMethod(opt.method);
   const SolverFactory::implemType implemType = getImplem(opt.implem);
@@ -263,6 +265,10 @@ void SEMproxy::init_arrays()
   rhsWeightsRcv = allocateArray2D<arrayReal>(
       rcv_coords_.size(), m_mesh->getNumberOfPointsPerElement(),
       "RHSWeightRcv");
+
+  if (in_situ_compute_quarts_)
+    inSituArr =
+      allocateVector<vectorReal>(m_mesh->getNumberOfNodes(), "inSituArr");
 }
 
 // Initialize sources
@@ -585,30 +591,61 @@ void SEMproxy::saveSnapshot(int timestep) {
   }
 }
 
+void SEMproxy::computeInSituQuart(int timestep) {
+  const int size = m_mesh->getNumberOfNodes();
+  auto view = Kokkos::subview(pnGlobal, Kokkos::ALL(), i1);
+
+  Kokkos::deep_copy(inSituArr, view);
+  Kokkos::sort(inSituArr);
+  size_t key = (size - 1) * 1 / 4;
+  in_situ_quartiles_[0] = inSituArr(key);
+  in_situ_quartiles_[1] = inSituArr(key * 2);
+  in_situ_quartiles_[2] = inSituArr(key * 3);
+
+  std::cout <<
+    "[local]1st: " << inSituArr(key) << ", [local]2nd: " << inSituArr(key * 2) << ", [local]3rd: " << inSituArr(key*3) << std::endl;
+    // " [global]mean: " << in_situ_mean_ << ", [global]min: " << in_situ_min_ << ", [global]max: " << in_situ_max_ << std::endl;
+}
+
+void SEMproxy::computeInSituStats(int timestep) {
+  const int size = m_mesh->getNumberOfNodes();
+    auto lambda = KOKKOS_LAMBDA(const int i, real_t& min, real_t & max, real_t& mean) {
+      auto p = pnGlobal;
+      auto c = i1;
+      const real_t val = pnGlobal(i, i1);
+      min = std::min(min, val);
+      max = std::max(max, val);
+      mean += val / size;
+    };
+
+    real_t mean = 0, ma = pnGlobal(0,i1), mi = pnGlobal(0,i1);
+    Kokkos::parallel_reduce("inSitu", size, lambda, Kokkos::Min<real_t>(mi), Kokkos::Max<real_t>(ma), mean);
+    Kokkos::fence();
+
+    auto K = (timestep - 1) * in_situ_k_;
+    if (in_situ_k_ == 1) {
+      in_situ_mean_= mean;
+      in_situ_min_ = mi;
+      in_situ_max_ = ma;
+    } else {
+      /* update old mean and add new elements */
+      in_situ_mean_= in_situ_mean_ * ((real_t)K / (K + size)) + (mean * ((real_t)size / (K + size)));
+      in_situ_min_ = min(mi, in_situ_min_);
+      in_situ_max_ = max(ma, in_situ_max_);
+    }
+
+    std::cout <<
+      "[local]mean: " << mean << ", [local]min: " << mi << ", [local]max: " << ma <<
+      " [global]mean: " << in_situ_mean_ << ", [global]min: " << in_situ_min_ << ", [global]max: " << in_situ_max_ << std::endl;
+}
+
 void SEMproxy::computeInSitu(int timestep) {
   if (timestep % in_situ_interval_ != 0)
     return;
-
   in_situ_k_++;
-  const int size = m_mesh->getNumberOfNodes();
-  auto lambda = KOKKOS_LAMBDA(const int i, real_t& min, real_t & max, real_t& mean) {
-    const real_t val = pnGlobal(i, i1);
-    min = std::min(min, val);
-    max = std::max(max, val);
-    mean += val / size;
-  };
 
-  real_t mean = 0, ma = 0, mi = 0;
-  Kokkos::parallel_reduce("inSitu", size, lambda, mi, ma, mean);
-  Kokkos::fence();
-
-  auto K = (timestep - 1) * in_situ_k_;
-  /* update old mean and add new elements */
-  in_situ_mean_ = in_situ_k_ == 1 ? mean : (in_situ_mean_ * ((real_t)K / (K + size))) + (mean * ((real_t)size / (K + size))) ;
-  in_situ_min_ = min(mi, in_situ_min_);
-  in_situ_max_ = max(ma, in_situ_max_);
-
-  std::cout <<
-    "[local]mean: " << mean << ", [local]min: " << mi << ", [local]max: " << ma <<
-    " [global]mean: " << in_situ_mean_ << ", [global]min: " << in_situ_min_ << ", [global]max: " << in_situ_max_ << std::endl;
-}
+  if (in_situ_compute_stats_)
+    computeInSituStats(timestep);
+  if(in_situ_compute_quarts_)
+    computeInSituQuart(timestep);
+  }

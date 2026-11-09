@@ -40,6 +40,7 @@ class SemProxyOptions
 
   int inSituInterval = 1;
   bool inSituStats = false;
+  bool inSituQuart = false;
 
   void validate() const
   {
@@ -106,6 +107,7 @@ class SemProxyOptions
 
         ("ins-interval", "In situ timestep interval (default 1)", cxxopts::value<int>(o.inSituInterval))
         ("ins-compute-stats", "Compute the stats of all values in-situ", cxxopts::value<bool>(o.inSituStats))
+        ("ins-compute-quartiles", "Compute the values of quartiles (1st, 2nd, 3rd)", cxxopts::value<bool>(o.inSituQuart))
     ;
   }
 };
