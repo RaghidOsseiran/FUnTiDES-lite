@@ -77,6 +77,9 @@ class SEMproxy
   void saveSnapshotCsv(int timestep);
   void saveSnapshotBin(int timestep);
   void saveSnapshot(int timestep);
+  void computeInSituStats(int timestep);
+  void computeInSituQuart(int timestep);
+  void computeInSitu(int timestep);
 
   void saveSeismograms(void);
   int getSeismosLoC(void);
@@ -99,6 +102,19 @@ class SEMproxy
   std::string snap_folder_;
   bool snap_use_csv_ = 0;
   bool snap_use_header_ = 0;
+
+  // in-situ
+  size_t in_situ_interval_ = 0;
+  size_t in_situ_k_ = 0; /* Number of iterations passed in in-situ */
+  bool in_situ_active_ = false;
+  bool in_situ_compute_stats_ = false;
+  bool in_situ_compute_quarts_ = false;
+
+  real_t in_situ_min_ = 0;
+  real_t in_situ_max_ = 0;
+  real_t in_situ_mean_ = 0;
+  real_t in_situ_quartiles_[3] = {0, 0, 0};
+
 
   // sismos
   std::ifstream receiver_positions_stream_;
@@ -131,6 +147,7 @@ class SEMproxy
   arrayReal rhsWeights;
   arrayReal rhsWeightsRcv;
   arrayReal pnAtReceiver;
+  vectorReal inSituArr;
 
   // initialize source and RHS
   void init_source();
@@ -144,6 +161,7 @@ class SEMproxy
   SolverFactory::implemType getImplem(string implemArg);
   SolverFactory::methodType getMethod(string methodArg);
   SolverFactory::meshType getMesh(string meshArg);
+
 };
 
 #endif /* SEMPROXY_HPP_ */
