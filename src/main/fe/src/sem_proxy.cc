@@ -676,7 +676,6 @@ void SEMproxy::saveSeismograms(void)
   metrics_.seismo_bytes +=
       std::filesystem::file_size(output_directory / "seismogram_recording.csv");
   std::cout <<  "Sismo save successfully at : "
-  std::cout <<  "Sismo save successfully at : "
             << std::filesystem::absolute(output_directory / "seismogram_recording.csv")
             << std::endl;
 }
