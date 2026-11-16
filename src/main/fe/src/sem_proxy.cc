@@ -5,6 +5,8 @@
 //
 //************************************************************************
 
+/* Some type definition in some files included by sem_proxy makes the include of kokkos sort fail */
+#include <Kokkos_Sort.hpp>
 #include "sem_proxy.h"
 
 #include <cartesian_struct_builder.h>
@@ -130,6 +132,11 @@ SEMproxy::SEMproxy(const SemProxyOptions& opt)
   snap_folder_ = opt.snapshotsFolder;
   snap_use_csv_ = opt.snapshotsUseCSV;
   snap_use_header_ = opt.snapshotsUseHeaders;
+
+  in_situ_interval_ = opt.inSituInterval;
+  in_situ_compute_stats_ = opt.inSituStats;
+  in_situ_compute_quarts_ = opt.inSituQuart;
+  in_situ_active_ = in_situ_compute_stats_ | in_situ_compute_quarts_;
   is_slices_ = opt.useSlices;
   slice_folder_ = opt.slicesFolder;
   slice_z_req_ = opt.sliceZ;
@@ -230,7 +237,7 @@ SEMproxy::SEMproxy(const SemProxyOptions& opt)
 void SEMproxy::run()
 {
   time_point<system_clock> startComputeTime, startOutputTime, startSeismoTime, totalComputeTime,
-      totalOutputTime, totalSeismoTime;
+      totalOutputTime, totalSeismoTime, startInSituTime, totalInSituTime;
 
   // steady_clock timers for the metrics file (see RunMetrics)
   using sclock = std::chrono::steady_clock;
@@ -330,7 +337,13 @@ void SEMproxy::run()
 
       pnAtReceiver(p, indexTimeSample) = varnp1;
     }
-    totalSeismoTime += system_clock::now() -startSeismoTime; 
+    totalSeismoTime += system_clock::now() -startSeismoTime;
+
+    if (in_situ_active_) {
+      startInSituTime = system_clock::now();
+      computeInSitu(indexTimeSample);
+      totalInSituTime += system_clock::now() - startInSituTime;
+    }
 
     swap(i1, i2);
 
@@ -351,12 +364,17 @@ void SEMproxy::run()
                             .time_since_epoch()
                             .count();
 
+  float insitutime_ms =
+      time_point_cast<microseconds>(totalInSituTime).time_since_epoch().count();
+
   cout << "------------------------------------------------ " << endl;
   cout << "\n---- Elapsed Kernel Time : " << kerneltime_ms / 1E6 << " seconds."
        << endl;
   cout << "---- Elapsed Recording Seismos Time : " << seismotime_ms / 1E6 << " seconds."
        << endl;
   cout << "---- Elapsed Output Time : " << outputtime_ms / 1E6 << " seconds."
+       << endl;
+  cout << "---- Elapsed In Situ Time : " << insitutime_ms / 1E6 << " seconds."
        << endl;
   cout << "------------------------------------------------ " << endl;
 }
@@ -380,6 +398,10 @@ void SEMproxy::init_arrays()
   rhsWeightsRcv = allocateArray2D<arrayReal>(
       rcv_coords_.size(), m_mesh->getNumberOfPointsPerElement(),
       "RHSWeightRcv");
+
+  if (in_situ_compute_quarts_)
+    inSituArr =
+      allocateVector<vectorReal>(m_mesh->getNumberOfNodes(), "inSituArr");
 }
 
 // Initialize sources
@@ -533,7 +555,7 @@ void SEMproxy::loadReceiverPositions(string filepath)
       throw std::runtime_error("Wrong format in file");
 
     if ((rcv_x < 0 || rcv_x >= domain_size_[0]) ||
-        (rcv_y < 0 || rcv_y >= domain_size_[1]) || 
+        (rcv_y < 0 || rcv_y >= domain_size_[1]) ||
         (rcv_z < 0 || rcv_z >= domain_size_[2]))
       throw std::runtime_error("Receiver " + std::to_string(idRcv) + " is outside the domain");
 
@@ -654,6 +676,7 @@ void SEMproxy::saveSeismograms(void)
   metrics_.seismo_bytes +=
       std::filesystem::file_size(output_directory / "seismogram_recording.csv");
   std::cout <<  "Sismo save successfully at : "
+  std::cout <<  "Sismo save successfully at : "
             << std::filesystem::absolute(output_directory / "seismogram_recording.csv")
             << std::endl;
 }
@@ -691,7 +714,7 @@ void SEMproxy::saveSnapshotCsv(int timestep) {
       file
         << m_mesh->nodeCoord(i, 0) << ';'
         << m_mesh->nodeCoord(i, 1) << ';'
-        << m_mesh->nodeCoord(i, 2) << ';' 
+        << m_mesh->nodeCoord(i, 2) << ';'
         << pnGlobal(i, i1)         << ';'
         << '\n';
     }
@@ -744,6 +767,65 @@ void SEMproxy::saveSnapshot(int timestep) {
     saveSnapshotBin(timestep);
   }
 }
+
+void SEMproxy::computeInSituQuart(int timestep) {
+  const int size = m_mesh->getNumberOfNodes();
+  auto view = Kokkos::subview(pnGlobal, Kokkos::ALL(), i1);
+
+  Kokkos::deep_copy(inSituArr, view);
+  Kokkos::sort(inSituArr);
+  size_t key = (size - 1) * 1 / 4;
+  in_situ_quartiles_[0] = inSituArr(key);
+  in_situ_quartiles_[1] = inSituArr(key * 2);
+  in_situ_quartiles_[2] = inSituArr(key * 3);
+
+  std::cout <<
+    "[local]1st: " << inSituArr(key) << ", [local]2nd: " << inSituArr(key * 2) << ", [local]3rd: " << inSituArr(key*3) << std::endl;
+    // " [global]mean: " << in_situ_mean_ << ", [global]min: " << in_situ_min_ << ", [global]max: " << in_situ_max_ << std::endl;
+}
+
+void SEMproxy::computeInSituStats(int timestep) {
+  const int size = m_mesh->getNumberOfNodes();
+  auto p = pnGlobal;  
+  auto c = i1;  
+  auto lambda = KOKKOS_LAMBDA(const int i, real_t& min, real_t & max, real_t& mean) {
+      const real_t val = p(i, c);
+      min = std::min(min, val);
+      max = std::max(max, val);
+      mean += val / size;
+    };
+
+    real_t mean = 0, ma = pnGlobal(0,i1), mi = pnGlobal(0,i1);
+    Kokkos::parallel_reduce("inSitu", size, lambda, Kokkos::Min<real_t>(mi), Kokkos::Max<real_t>(ma), mean);
+    Kokkos::fence();
+
+    auto K = (timestep - 1) * in_situ_k_;
+    if (in_situ_k_ == 1) {
+      in_situ_mean_= mean;
+      in_situ_min_ = mi;
+      in_situ_max_ = ma;
+    } else {
+      /* update old mean and add new elements */
+      in_situ_mean_= in_situ_mean_ * ((real_t)K / (K + size)) + (mean * ((real_t)size / (K + size)));
+      in_situ_min_ = min(mi, in_situ_min_);
+      in_situ_max_ = max(ma, in_situ_max_);
+    }
+
+    std::cout <<
+      "[local]mean: " << mean << ", [local]min: " << mi << ", [local]max: " << ma <<
+      " [global]mean: " << in_situ_mean_ << ", [global]min: " << in_situ_min_ << ", [global]max: " << in_situ_max_ << std::endl;
+}
+
+void SEMproxy::computeInSitu(int timestep) {
+  if (timestep % in_situ_interval_ != 0)
+    return;
+  in_situ_k_++;
+
+  if (in_situ_compute_stats_)
+    computeInSituStats(timestep);
+  if(in_situ_compute_quarts_)
+    computeInSituQuart(timestep);
+  }
 
 std::string SEMproxy::slicePath(int timestep) const {
   return (std::filesystem::path(slice_folder_) /
