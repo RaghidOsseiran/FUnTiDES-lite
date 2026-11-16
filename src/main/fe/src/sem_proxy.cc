@@ -209,7 +209,8 @@ SEMproxy::SEMproxy(const SemProxyOptions& opt)
     dt_ = opt.dt;
   }
   timemax_ = opt.timemax;
-  num_sample_ = timemax_ / dt_;
+  // rounded, not truncated: 1.0f / 0.001f = 999.99994 must give 1000 steps
+  num_sample_ = static_cast<int>(std::lround(timemax_ / dt_));
 
   m_solver = SolverFactory::createSolver(methodType, implemType, meshType,
                                          modelLocation, physicType, order);
@@ -315,7 +316,8 @@ void SEMproxy::run()
     previous_step_was_output = is_output_step;
 
     startSeismoTime = system_clock::now();
-    // Save pressure at receiver
+    // Save pressure at receiver: i1 holds the field just computed (time
+    // sampleTime(indexTimeSample)), the same column as snapshots and slices
     const int order = m_mesh->getOrder();
     for (int p = 0; p < rcv_coords_.size(); ++p)
     {
@@ -330,7 +332,7 @@ void SEMproxy::run()
             int globalNodeOnElement =
                 i + j * (order + 1) + k * (order + 1) * (order + 1);
             varnp1 +=
-                pnGlobal(nodeIdx, i2) * rhsWeightsRcv(p, globalNodeOnElement);
+                pnGlobal(nodeIdx, i1) * rhsWeightsRcv(p, globalNodeOnElement);
           }
         }
       }
@@ -612,6 +614,9 @@ void SEMproxy::saveSeismograms(void)
 
   std::ofstream out(output_directory / "seismogram_recording.csv");
   if (!out) throw std::runtime_error("Cannot open the file");
+  // 9 significant digits: every float reads back exactly (the default 6
+  // digits made the adhoc analysis differ from the in-situ one)
+  out << std::setprecision(std::numeric_limits<float>::max_digits10);
 
   if (seismo_use_header_) {
     std::ofstream coords_file(output_directory / "headers.csv");
@@ -630,7 +635,8 @@ void SEMproxy::saveSeismograms(void)
     for (int indexTimeSample = 0; indexTimeSample < num_sample_;
        indexTimeSample++)
     {
-      out << indexTimeSample << ',' << indexTimeSample * dt_;
+      // shortest text that reads back as the same float (0.001, not 0.00100000005)
+      out << indexTimeSample << ',' << jsonFloat(sampleTime(indexTimeSample));
       for (int p = 0; p < rcv_coords_.size(); ++p)
       {
         out << ',' << pnAtReceiver(p, indexTimeSample);
@@ -656,7 +662,8 @@ void SEMproxy::saveSeismograms(void)
     for (int indexTimeSample = 0; indexTimeSample < num_sample_;
         indexTimeSample++)
     {
-      out << indexTimeSample << ',' << indexTimeSample * dt_;
+      // shortest text that reads back as the same float (0.001, not 0.00100000005)
+      out << indexTimeSample << ',' << jsonFloat(sampleTime(indexTimeSample));
       for (int p = 0; p < rcv_coords_.size(); ++p)
       {
         out << ',' << pnAtReceiver(p, indexTimeSample);

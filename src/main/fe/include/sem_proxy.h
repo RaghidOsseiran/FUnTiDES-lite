@@ -156,6 +156,11 @@ class SEMproxy
     std::uintmax_t seismo_bytes = 0;
   } metrics_;
 
+  // Physical time of output step `step`. computeOneStep(step) writes p at
+  // (step + 1) * dt into column i1, and every output (seismograms, snapshots,
+  // slices, in-situ) reads i1 after it: they all describe this time.
+  float sampleTime(int step) const { return (step + 1) * dt_; }
+
   std::string snapshotPath(int timestep) const;
   std::string snapshotHeaderPath() const;
   std::string slicePath(int timestep) const;
