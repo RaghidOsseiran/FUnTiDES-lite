@@ -27,6 +27,9 @@ void compute(SEMproxy& semsim)
   semsim.saveSeismograms();
   time_point<system_clock> endSaveSeismosTime = system_clock::now();
 
+  // results of the in-situ seismograms analysis (no-op if not enabled)
+  semsim.saveInSituSeismos();
+
   // print timing information
   cout << "Elapsed Initial Time : "
        << (startRunTime - startInitTime).count() / 1E9 << " seconds." << endl;
@@ -36,7 +39,6 @@ void compute(SEMproxy& semsim)
   cout << "Elapsed Saving Seismos Time : "
        << (endSaveSeismosTime - startSaveSeismosTime).count() / 1E9 << " seconds."
        << endl;
-  // cout << "LoC : " << semsim.getSeismosLoC() << endl;
 
   // after the timing prints, so it is not counted in the times above
   semsim.writeMetrics();

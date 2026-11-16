@@ -137,6 +137,10 @@ SEMproxy::SEMproxy(const SemProxyOptions& opt)
   in_situ_compute_stats_ = opt.inSituStats;
   in_situ_compute_quarts_ = opt.inSituQuart;
   in_situ_active_ = in_situ_compute_stats_ | in_situ_compute_quarts_;
+  in_situ_seismos_compute_stats_ = opt.inSituSeismosStats;
+  in_situ_seismos_compute_peaks_ = opt.inSituSeismosPeaks;
+  in_situ_seismos_active_ =
+      in_situ_seismos_compute_stats_ | in_situ_seismos_compute_peaks_;
   is_slices_ = opt.useSlices;
   slice_folder_ = opt.slicesFolder;
   slice_z_req_ = opt.sliceZ;
@@ -238,7 +242,8 @@ SEMproxy::SEMproxy(const SemProxyOptions& opt)
 void SEMproxy::run()
 {
   time_point<system_clock> startComputeTime, startOutputTime, startSeismoTime, totalComputeTime,
-      totalOutputTime, totalSeismoTime, startInSituTime, totalInSituTime;
+      totalOutputTime, totalSeismoTime, startInSituTime, totalInSituTime,
+      startInSituSeismosTime, totalInSituSeismosTime;
 
   // steady_clock timers for the metrics file (see RunMetrics)
   using sclock = std::chrono::steady_clock;
@@ -347,6 +352,13 @@ void SEMproxy::run()
       totalInSituTime += system_clock::now() - startInSituTime;
     }
 
+    // after the recording above: pnAtReceiver(:, indexTimeSample) is ready
+    if (in_situ_seismos_active_) {
+      startInSituSeismosTime = system_clock::now();
+      computeInSituSeismos(indexTimeSample);
+      totalInSituSeismosTime += system_clock::now() - startInSituSeismosTime;
+    }
+
     swap(i1, i2);
 
     auto tmp = solverData.m_i1;
@@ -368,6 +380,10 @@ void SEMproxy::run()
 
   float insitutime_ms =
       time_point_cast<microseconds>(totalInSituTime).time_since_epoch().count();
+  float insituseismostime_ms =
+      time_point_cast<microseconds>(totalInSituSeismosTime)
+          .time_since_epoch()
+          .count();
 
   cout << "------------------------------------------------ " << endl;
   cout << "\n---- Elapsed Kernel Time : " << kerneltime_ms / 1E6 << " seconds."
@@ -378,6 +394,8 @@ void SEMproxy::run()
        << endl;
   cout << "---- Elapsed In Situ Time : " << insitutime_ms / 1E6 << " seconds."
        << endl;
+  cout << "---- Elapsed In Situ Seismos Time : " << insituseismostime_ms / 1E6
+       << " seconds." << endl;
   cout << "------------------------------------------------ " << endl;
 }
 
@@ -404,6 +422,19 @@ void SEMproxy::init_arrays()
   if (in_situ_compute_quarts_)
     inSituArr =
       allocateVector<vectorReal>(m_mesh->getNumberOfNodes(), "inSituArr");
+
+  if (in_situ_seismos_active_)
+  {
+    const size_t n_rcv = rcv_coords_.size();
+    in_situ_seismos_min_.assign(n_rcv, std::numeric_limits<double>::infinity());
+    in_situ_seismos_max_.assign(n_rcv, -std::numeric_limits<double>::infinity());
+    in_situ_seismos_mean_.assign(n_rcv, 0.0);
+    in_situ_seismos_m2_.assign(n_rcv, 0.0);
+    // -1 so that the first sample always becomes the peak (idxmax keeps the
+    // first index on ties, including an all-zero seismogram)
+    in_situ_seismos_peak_abs_.assign(n_rcv, -1.0);
+    in_situ_seismos_t_peak_.assign(n_rcv, 0.0);
+  }
 }
 
 // Initialize sources
@@ -836,6 +867,110 @@ void SEMproxy::computeInSitu(int timestep) {
     computeInSituQuart(timestep);
   }
 
+void SEMproxy::computeInSituSeismosStats(int timestep) {
+  const double k = static_cast<double>(in_situ_seismos_k_);
+  for (size_t p = 0; p < rcv_coords_.size(); ++p) {
+    const double val = pnAtReceiver(p, timestep);
+    in_situ_seismos_min_[p] = std::min(in_situ_seismos_min_[p], val);
+    in_situ_seismos_max_[p] = std::max(in_situ_seismos_max_[p], val);
+
+    const double delta = val - in_situ_seismos_mean_[p];
+    in_situ_seismos_mean_[p] += delta / k;
+    in_situ_seismos_m2_[p] += delta * (val - in_situ_seismos_mean_[p]);
+  }
+}
+
+void SEMproxy::computeInSituSeismosPeaks(int timestep) {
+  const double t = sampleTime(timestep);
+  for (size_t p = 0; p < rcv_coords_.size(); ++p) {
+    const double abs_val = std::fabs(static_cast<double>(pnAtReceiver(p, timestep)));
+    if (abs_val > in_situ_seismos_peak_abs_[p]) {
+      in_situ_seismos_peak_abs_[p] = abs_val;
+      in_situ_seismos_t_peak_[p] = t;
+    }
+  }
+}
+
+void SEMproxy::computeInSituSeismos(int timestep) {
+  if (timestep % in_situ_interval_ != 0)
+    return;
+  in_situ_seismos_k_++;
+  metrics_.insitu_seismos_count++;
+
+  using sclock = std::chrono::steady_clock;
+  if (in_situ_seismos_compute_stats_) {
+    const sclock::time_point t0 = sclock::now();
+    computeInSituSeismosStats(timestep);
+    metrics_.insitu_seismos_stats_s += secondsBetween(t0, sclock::now());
+  }
+  if (in_situ_seismos_compute_peaks_) {
+    const sclock::time_point t0 = sclock::now();
+    computeInSituSeismosPeaks(timestep);
+    metrics_.insitu_seismos_peaks_s += secondsBetween(t0, sclock::now());
+  }
+}
+
+void SEMproxy::saveInSituSeismos(void) {
+  if (!in_situ_seismos_active_)
+    return;
+
+  std::filesystem::path output_directory(seismograms_data_folder_);
+  std::filesystem::create_directories(output_directory);
+  if (!std::filesystem::is_directory(output_directory))
+    throw std::runtime_error("Path exists but it is not a directory");
+
+  const double k = static_cast<double>(in_situ_seismos_k_);
+  const std::filesystem::path results_path = output_directory / "insitu_results.json";
+  std::ofstream out(results_path);
+  if (!out) throw std::runtime_error("Cannot open " + results_path.string());
+
+  out << "{\n"
+      << "  \"simulation\": {\n"
+      << "    \"source\": [" << jsonFloat(src_coord_[0]) << ", "
+      << jsonFloat(src_coord_[1]) << ", " << jsonFloat(src_coord_[2]) << "],\n"
+      << "    \"dt\": " << jsonFloat(dt_) << ",\n"
+      << "    \"num_sample\": " << num_sample_ << ",\n"
+      << "    \"domain\": [" << jsonFloat(domain_size_[0]) << ", "
+      << jsonFloat(domain_size_[1]) << ", " << jsonFloat(domain_size_[2]) << "],\n"
+      << "    \"ins_interval\": " << in_situ_interval_ << ",\n"
+      << "    \"ins_samples\": " << in_situ_seismos_k_ << "\n"
+      << "  },\n"
+      << "  \"receivers\": [";
+  for (size_t p = 0; p < rcv_coords_.size(); ++p) {
+    out << (p ? "," : "") << "\n    {\n"
+        << "      \"rcv\": " << jsonString("rcv_" + std::to_string(rcv_coords_[p].first));
+    if (in_situ_seismos_compute_stats_)
+      out << ",\n      \"min\": " << jsonDouble(in_situ_seismos_min_[p])
+          << ",\n      \"max\": " << jsonDouble(in_situ_seismos_max_[p])
+          << ",\n      \"mean\": " << jsonDouble(in_situ_seismos_mean_[p])
+          << ",\n      \"var\": " << jsonDouble(in_situ_seismos_m2_[p] / k);
+    if (in_situ_seismos_compute_peaks_)
+      out << ",\n      \"peak_abs\": " << jsonDouble(in_situ_seismos_peak_abs_[p])
+          << ",\n      \"t_peak\": " << jsonDouble(in_situ_seismos_t_peak_[p]);
+    out << "\n    }";
+  }
+  out << "\n  ]\n}\n";
+  out.close();
+  if (!out) throw std::runtime_error("Cannot write " + results_path.string());
+
+  // timings, same keys as adhoc_metrics.json ("read" has no in-situ equivalent)
+  const std::filesystem::path metrics_path = output_directory / "insitu_metrics.json";
+  std::ofstream m(metrics_path);
+  if (!m) throw std::runtime_error("Cannot open " + metrics_path.string());
+  m << "{\n";
+  if (in_situ_seismos_compute_stats_)
+    m << "  \"stats\": " << jsonDouble(metrics_.insitu_seismos_stats_s)
+      << (in_situ_seismos_compute_peaks_ ? ",\n" : "\n");
+  if (in_situ_seismos_compute_peaks_)
+    m << "  \"peaks\": " << jsonDouble(metrics_.insitu_seismos_peaks_s) << "\n";
+  m << "}\n";
+  m.close();
+  if (!m) throw std::runtime_error("Cannot write " + metrics_path.string());
+
+  std::cout << "In-situ seismos results save successfully at : "
+            << std::filesystem::absolute(results_path) << std::endl;
+}
+
 std::string SEMproxy::slicePath(int timestep) const {
   return (std::filesystem::path(slice_folder_) /
           ("slice-" + std::to_string(timestep) + ".dat"))
@@ -987,6 +1122,9 @@ void SEMproxy::writeMetrics() {
       << "    \"slice_z\": " << (is_slices_ ? jsonFloat(slice_z_) : "null") << ",\n"
       << "    \"sync_writes\": " << jsonBool(sync_writes_) << ",\n"
       << "    \"seismograms_folder\": " << jsonString(seismograms_data_folder_) << ",\n"
+      << "    \"ins_interval\": " << in_situ_interval_ << ",\n"
+      << "    \"ins_seismos_compute_stats\": " << jsonBool(in_situ_seismos_compute_stats_) << ",\n"
+      << "    \"ins_seismos_compute_peaks\": " << jsonBool(in_situ_seismos_compute_peaks_) << ",\n"
       << "    \"metrics_file\": " << jsonString(path) << "\n"
       << "  },\n"
       << "  \"nodes\": " << m_mesh->getNumberOfNodes() << ",\n"
@@ -1006,8 +1144,11 @@ void SEMproxy::writeMetrics() {
       << "  \"snapshot_bytes\": " << m.snapshot_bytes << ",\n"
       << "  \"slice_bytes\": " << m.slice_bytes << ",\n"
       << "  \"header_bytes\": " << m.header_bytes << ",\n"
-      << "  \"seismo_bytes\": " << m.seismo_bytes << "\n"
-      << "}\n";
+      << "  \"seismo_bytes\": " << m.seismo_bytes << ",\n"
+      << "  \"insitu_seismos_stats_s\": " << jsonDouble(m.insitu_seismos_stats_s) << ",\n"
+      << "  \"insitu_seismos_peaks_s\": " << jsonDouble(m.insitu_seismos_peaks_s) << ",\n"
+      << "  \"insitu_seismos_count\": " << m.insitu_seismos_count << "\n"
+        << "}\n";
   out.close();
   if (!out) throw std::runtime_error("Cannot write the metrics file " + path);
   std::cout << "Metrics save successfully at : "

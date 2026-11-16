@@ -82,6 +82,12 @@ class SEMproxy
   void computeInSituStats(int timestep);
   void computeInSituQuart(int timestep);
   void computeInSitu(int timestep);
+  void computeInSituSeismosStats(int timestep);
+  void computeInSituSeismosPeaks(int timestep);
+  void computeInSituSeismos(int timestep);
+  // Write insitu_results.json / insitu_metrics.json in the seismograms folder
+  // (same layout as adhoc_results.json / adhoc_metrics.json)
+  void saveInSituSeismos(void);
 
   // z-slice output, two separately timed steps: copy layer k of column i1
   // into slice_buf_, then write slice_buf_ to slice-<timestep>.dat
@@ -125,6 +131,20 @@ class SEMproxy
   real_t in_situ_mean_ = 0;
   real_t in_situ_quartiles_[3] = {0, 0, 0};
 
+  // in-situ seismograms: one value per receiver, updated at each in-situ step
+  // (accumulated in double, like the float64 of pandas in the adhoc script)
+  size_t in_situ_seismos_k_ = 0; /* Number of samples passed in in-situ */
+  bool in_situ_seismos_active_ = false;
+  bool in_situ_seismos_compute_stats_ = false;
+  bool in_situ_seismos_compute_peaks_ = false;
+
+  std::vector<double> in_situ_seismos_min_;
+  std::vector<double> in_situ_seismos_max_;
+  std::vector<double> in_situ_seismos_mean_;
+  std::vector<double> in_situ_seismos_m2_; /* sum of squared deviations (Welford) */
+  std::vector<double> in_situ_seismos_peak_abs_;
+  std::vector<double> in_situ_seismos_t_peak_;
+
 
   // slices
   bool is_slices_ = false;
@@ -154,6 +174,9 @@ class SEMproxy
     std::uintmax_t slice_bytes = 0;
     std::uintmax_t header_bytes = 0;
     std::uintmax_t seismo_bytes = 0;
+    double insitu_seismos_stats_s = 0;
+    double insitu_seismos_peaks_s = 0;
+    int insitu_seismos_count = 0;
   } metrics_;
 
   // Physical time of output step `step`. computeOneStep(step) writes p at

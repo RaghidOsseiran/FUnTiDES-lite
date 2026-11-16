@@ -43,6 +43,9 @@ class SemProxyOptions
   int inSituInterval = 1;
   bool inSituStats = false;
   bool inSituQuart = false;
+  // in-situ seismograms: same metrics as scripts/seismos_adhoc.py
+  bool inSituSeismosStats = false;  // min, max, mean, var per receiver
+  bool inSituSeismosPeaks = false;  // peak_abs, t_peak per receiver
 
   // z-slices: written at every snapshot output step (same snapshotsInterval)
   bool useSlices = false;
@@ -135,6 +138,8 @@ class SemProxyOptions
         ("metrics-file", "JSON file where run timers and byte counts are written", cxxopts::value<std::string>(o.metricsFile))
         ("ins-interval", "In situ timestep interval (default 1)", cxxopts::value<int>(o.inSituInterval))
         ("ins-compute-stats", "Compute the stats of all values in-situ", cxxopts::value<bool>(o.inSituStats))
-        ("ins-compute-quartiles", "Compute the values of quartiles (1st, 2nd, 3rd)", cxxopts::value<bool>(o.inSituQuart));
+        ("ins-compute-quartiles", "Compute the values of quartiles (1st, 2nd, 3rd)", cxxopts::value<bool>(o.inSituQuart))
+        ("ins-seismos-compute-stats", "Compute in-situ min, max, mean and variance of each seismogram", cxxopts::value<bool>(o.inSituSeismosStats))
+        ("ins-seismos-compute-peaks", "Compute in-situ the absolute peak of each seismogram and its time", cxxopts::value<bool>(o.inSituSeismosPeaks));
   }
 };
