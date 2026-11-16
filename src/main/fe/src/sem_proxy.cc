@@ -773,13 +773,15 @@ void SEMproxy::computeInSituQuart(int timestep) {
 
   Kokkos::deep_copy(inSituArr, view);
   Kokkos::sort(inSituArr);
-  size_t key = (size - 1) * 1 / 4;
-  in_situ_quartiles_[0] = inSituArr(key);
-  in_situ_quartiles_[1] = inSituArr(key * 2);
-  in_situ_quartiles_[2] = inSituArr(key * 3);
+  /* each index computed on its own: 2*((size-1)/4) is not (size-1)/2 when
+     size-1 is not a multiple of 4 (e.g. ex=25, order 2) */
+  const size_t last = size - 1;
+  in_situ_quartiles_[0] = inSituArr(last / 4);
+  in_situ_quartiles_[1] = inSituArr(last / 2);
+  in_situ_quartiles_[2] = inSituArr(3 * last / 4);
 
   std::cout <<
-    "[local]1st: " << inSituArr(key) << ", [local]2nd: " << inSituArr(key * 2) << ", [local]3rd: " << inSituArr(key*3) << std::endl;
+    "[local]1st: " << in_situ_quartiles_[0] << ", [local]2nd: " << in_situ_quartiles_[1] << ", [local]3rd: " << in_situ_quartiles_[2] << std::endl;
     // " [global]mean: " << in_situ_mean_ << ", [global]min: " << in_situ_min_ << ", [global]max: " << in_situ_max_ << std::endl;
 }
 
@@ -798,7 +800,8 @@ void SEMproxy::computeInSituStats(int timestep) {
     Kokkos::parallel_reduce("inSitu", size, lambda, Kokkos::Min<real_t>(mi), Kokkos::Max<real_t>(ma), mean);
     Kokkos::fence();
 
-    auto K = (timestep - 1) * in_situ_k_;
+    /* number of values already in the global mean: size per previous in-situ step */
+    const size_t K = (in_situ_k_ - 1) * size;
     if (in_situ_k_ == 1) {
       in_situ_mean_= mean;
       in_situ_min_ = mi;

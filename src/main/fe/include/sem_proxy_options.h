@@ -70,6 +70,10 @@ class SemProxyOptions
         throw std::runtime_error("snapshot folder is incorrect");
     }
 
+    // used as a modulo in computeInSitu / computeInSituSeismos
+    if (inSituInterval <= 0)
+      throw std::runtime_error("ins-interval must be > 0");
+
     // slices rely on the structured numbering i + j*nx + k*nx*ny
     if (useSlices && mesh != "cartesian")
       throw std::runtime_error("--use-slices requires --mesh cartesian");
