@@ -5,6 +5,8 @@
 //
 //************************************************************************
 
+/* Some type definition in some files included by sem_proxy makes the include of kokkos sort fail */
+#include <Kokkos_Sort.hpp>
 #include "sem_proxy.h"
 
 #include <cartesian_struct_builder.h>
@@ -19,7 +21,6 @@
 #include <iostream>
 #include <sstream>
 #include <variant>
-#include "Kokkos_Sort.hpp"
 
 using namespace SourceAndReceiverUtils;
 
@@ -609,10 +610,10 @@ void SEMproxy::computeInSituQuart(int timestep) {
 
 void SEMproxy::computeInSituStats(int timestep) {
   const int size = m_mesh->getNumberOfNodes();
-    auto lambda = KOKKOS_LAMBDA(const int i, real_t& min, real_t & max, real_t& mean) {
-      auto p = pnGlobal;
-      auto c = i1;
-      const real_t val = pnGlobal(i, i1);
+  auto p = pnGlobal;  
+  auto c = i1;  
+  auto lambda = KOKKOS_LAMBDA(const int i, real_t& min, real_t & max, real_t& mean) {
+      const real_t val = p(i, c);
       min = std::min(min, val);
       max = std::max(max, val);
       mean += val / size;
