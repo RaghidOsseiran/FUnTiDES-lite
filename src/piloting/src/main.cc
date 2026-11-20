@@ -21,7 +21,4 @@ int main(int argc, char **argv) {
     exit(0);
   }
   changed.overwrite_map(file);
-
-  // Piloting::PilotingMap map(file);
-  // map.overwrite();
 }

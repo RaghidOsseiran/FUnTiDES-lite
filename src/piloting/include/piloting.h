@@ -36,7 +36,6 @@ namespace Piloting {
       fd_ = open(file.c_str(), O_RDWR);
       opts = (PilotingOptions *)mmap(NULL, sizeof(PilotingOptions), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE | MAP_LOCKED, fd_, 0);
 
-      std::cout << opts->snap_now << " " << snap_now_ << std::endl;
       opts->stop |= stop_;
       if (opts->z_slice != z_slice_) opts->z_slice = z_slice_;
       if (opts->frequency != frequency_) opts->frequency = frequency_;

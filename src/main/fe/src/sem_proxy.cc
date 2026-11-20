@@ -596,6 +596,10 @@ void SEMproxy::saveSnapshotBin(int timestep) {
 }
 
 void SEMproxy::saveSnapshot(int timestep) {
+  if (snap_time_interval_ !=  pilot_map_.opts->frequency)
+    std::cout << "Snapshot interval changed ! " << snap_time_interval_ << " -> " << pilot_map_.opts->frequency << std::endl;
+  snap_time_interval_ =  pilot_map_.opts->frequency;
+
   bool snap = (timestep % snap_time_interval_) == 0 || (pilot_map_.opts->snap_now > snap_now_counter);
   snap_now_counter = pilot_map_.opts->snap_now;
   if (!snap)
