@@ -115,7 +115,7 @@ class SemProxyOptions
         ("ins-compute-quartiles", "Compute the values of quartiles (1st, 2nd, 3rd)", cxxopts::value<bool>(o.inSituQuart))
 
         ("piloting", "Create and read from a shared memory handle used by the piloting executable", cxxopts::value<bool>(o.usePiloting))
-        ("piloting-file", "Filename for the piloting handle (default=\".pilote\")", cxxopts::value<std::string>(o.pilotingFile))
+        ("piloting-file", "Filename for the piloting handle (default=\"" + Piloting::default_file + "\")", cxxopts::value<std::string>(o.pilotingFile))
     ;
   }
 };
