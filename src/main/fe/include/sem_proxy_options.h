@@ -71,6 +71,9 @@ class SemProxyOptions
     return bits;
   }
 
+  int inSituInterval = 1;
+  bool inSituStats = false;
+  bool inSituQuart = false;
 
   void validate() const
   {
@@ -172,6 +175,10 @@ class SemProxyOptions
         ("quant-where", "Where the quantization runs: gpu (host reads only the reduced data) | host (host reads the full field)", cxxopts::value<std::string>(o.quantWhere))
         ("quant-bounds", "Bounds of the uint mapping: snapshot (min/max of each snapshot) | symmetric (+-max|p| of each snapshot) | fixed (+-quant-amax, clamped)", cxxopts::value<std::string>(o.quantBounds))
         ("quant-amax", "Amplitude A of the fixed bounds [-A, A] (--quant-bounds fixed)", cxxopts::value<float>(o.quantAmax))
-        ("quant-folder", "Folder where the quantized snapshots are stored (created if missing)", cxxopts::value<std::string>(o.quantFolder));
+        ("quant-folder", "Folder where the quantized snapshots are stored (created if missing)", cxxopts::value<std::string>(o.quantFolder))
+        ("ins-interval", "In situ timestep interval (default 1)", cxxopts::value<int>(o.inSituInterval))
+        ("ins-compute-stats", "Compute the stats of all values in-situ", cxxopts::value<bool>(o.inSituStats))
+        ("ins-compute-quartiles", "Compute the values of quartiles (1st, 2nd, 3rd)", cxxopts::value<bool>(o.inSituQuart))
+    ;
   }
 };
