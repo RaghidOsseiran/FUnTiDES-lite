@@ -1,0 +1,311 @@
+{
+  "runs": [
+    {
+      "config": "S",
+      "size": 50,
+      "variant": "none",
+      "sync": false,
+      "rep": 1,
+      "position": 1,
+      "name": "50_none_r1"
+    },
+    {
+      "config": "S",
+      "size": 50,
+      "variant": "slice",
+      "sync": false,
+      "rep": 1,
+      "position": 2,
+      "name": "50_slice_r1"
+    },
+    {
+      "config": "S",
+      "size": 50,
+      "variant": "snap",
+      "sync": false,
+      "rep": 1,
+      "position": 3,
+      "name": "50_snap_r1"
+    },
+    {
+      "config": "S",
+      "size": 50,
+      "variant": "slice",
+      "sync": false,
+      "rep": 2,
+      "position": 1,
+      "name": "50_slice_r2"
+    },
+    {
+      "config": "S",
+      "size": 50,
+      "variant": "snap",
+      "sync": false,
+      "rep": 2,
+      "position": 2,
+      "name": "50_snap_r2"
+    },
+    {
+      "config": "S",
+      "size": 50,
+      "variant": "none",
+      "sync": false,
+      "rep": 2,
+      "position": 3,
+      "name": "50_none_r2"
+    },
+    {
+      "config": "S",
+      "size": 50,
+      "variant": "snap",
+      "sync": false,
+      "rep": 3,
+      "position": 1,
+      "name": "50_snap_r3"
+    },
+    {
+      "config": "S",
+      "size": 50,
+      "variant": "none",
+      "sync": false,
+      "rep": 3,
+      "position": 2,
+      "name": "50_none_r3"
+    },
+    {
+      "config": "S",
+      "size": 50,
+      "variant": "slice",
+      "sync": false,
+      "rep": 3,
+      "position": 3,
+      "name": "50_slice_r3"
+    },
+    {
+      "config": "M",
+      "size": 100,
+      "variant": "none",
+      "sync": false,
+      "rep": 1,
+      "position": 1,
+      "name": "100_none_r1"
+    },
+    {
+      "config": "M",
+      "size": 100,
+      "variant": "slice",
+      "sync": false,
+      "rep": 1,
+      "position": 2,
+      "name": "100_slice_r1"
+    },
+    {
+      "config": "M",
+      "size": 100,
+      "variant": "snap",
+      "sync": false,
+      "rep": 1,
+      "position": 3,
+      "name": "100_snap_r1"
+    },
+    {
+      "config": "M",
+      "size": 100,
+      "variant": "slice",
+      "sync": false,
+      "rep": 2,
+      "position": 1,
+      "name": "100_slice_r2"
+    },
+    {
+      "config": "M",
+      "size": 100,
+      "variant": "snap",
+      "sync": false,
+      "rep": 2,
+      "position": 2,
+      "name": "100_snap_r2"
+    },
+    {
+      "config": "M",
+      "size": 100,
+      "variant": "none",
+      "sync": false,
+      "rep": 2,
+      "position": 3,
+      "name": "100_none_r2"
+    },
+    {
+      "config": "M",
+      "size": 100,
+      "variant": "snap",
+      "sync": false,
+      "rep": 3,
+      "position": 1,
+      "name": "100_snap_r3"
+    },
+    {
+      "config": "M",
+      "size": 100,
+      "variant": "none",
+      "sync": false,
+      "rep": 3,
+      "position": 2,
+      "name": "100_none_r3"
+    },
+    {
+      "config": "M",
+      "size": 100,
+      "variant": "slice",
+      "sync": false,
+      "rep": 3,
+      "position": 3,
+      "name": "100_slice_r3"
+    },
+    {
+      "config": "L",
+      "size": 200,
+      "variant": "none",
+      "sync": false,
+      "rep": 1,
+      "position": 1,
+      "name": "200_none_r1"
+    },
+    {
+      "config": "L",
+      "size": 200,
+      "variant": "slice",
+      "sync": false,
+      "rep": 1,
+      "position": 2,
+      "name": "200_slice_r1"
+    },
+    {
+      "config": "L",
+      "size": 200,
+      "variant": "snap",
+      "sync": false,
+      "rep": 1,
+      "position": 3,
+      "name": "200_snap_r1"
+    },
+    {
+      "config": "L",
+      "size": 200,
+      "variant": "slice",
+      "sync": false,
+      "rep": 2,
+      "position": 1,
+      "name": "200_slice_r2"
+    },
+    {
+      "config": "L",
+      "size": 200,
+      "variant": "snap",
+      "sync": false,
+      "rep": 2,
+      "position": 2,
+      "name": "200_snap_r2"
+    },
+    {
+      "config": "L",
+      "size": 200,
+      "variant": "none",
+      "sync": false,
+      "rep": 2,
+      "position": 3,
+      "name": "200_none_r2"
+    },
+    {
+      "config": "L",
+      "size": 200,
+      "variant": "snap",
+      "sync": false,
+      "rep": 3,
+      "position": 1,
+      "name": "200_snap_r3"
+    },
+    {
+      "config": "L",
+      "size": 200,
+      "variant": "none",
+      "sync": false,
+      "rep": 3,
+      "position": 2,
+      "name": "200_none_r3"
+    },
+    {
+      "config": "L",
+      "size": 200,
+      "variant": "slice",
+      "sync": false,
+      "rep": 3,
+      "position": 3,
+      "name": "200_slice_r3"
+    }
+  ],
+  "predicted": {
+    "50": {
+      "nodes": 1030301,
+      "outputs": 15,
+      "snap_bytes": 247272240,
+      "slice_bytes": 612060,
+      "bytes": {
+        "none": 0,
+        "snap": 247272240,
+        "slice": 612060,
+        "both": 247884300
+      }
+    },
+    "100": {
+      "nodes": 8120601,
+      "outputs": 15,
+      "snap_bytes": 1948944240,
+      "slice_bytes": 2424060,
+      "bytes": {
+        "none": 0,
+        "snap": 1948944240,
+        "slice": 2424060,
+        "both": 1951368300
+      }
+    },
+    "200": {
+      "nodes": 64481201,
+      "outputs": 15,
+      "snap_bytes": 15475488240,
+      "slice_bytes": 9648060,
+      "bytes": {
+        "none": 0,
+        "snap": 15475488240,
+        "slice": 9648060,
+        "both": 15485136300
+      }
+    }
+  },
+  "args": {
+    "outdir": "/autofs/unitytravail/travail/raosseiran/M2/insitu/FUnTiDES-lite/bench_SML",
+    "configs": "['S', 'M', 'L']",
+    "sizes": "[50, 100, 200]",
+    "reps": "3",
+    "variants": "['none', 'snap', 'slice']",
+    "snap_format": "bin",
+    "sync": "off",
+    "order": "2",
+    "timemax": "1.5",
+    "dt": "0.001",
+    "interval": "100",
+    "slice_z": "None",
+    "receivers": "/autofs/unitytravail/travail/raosseiran/M2/insitu/FUnTiDES-lite/receiver_positions.txt",
+    "visu_repeat": "3",
+    "no_visu": "False",
+    "keep_files": "False",
+    "max_gb": "20.0",
+    "no_warmup": "False",
+    "semproxy": "/autofs/unitytravail/travail/raosseiran/M2/insitu/FUnTiDES-lite/build/bin/semproxy",
+    "viewer": "/autofs/unitytravail/travail/raosseiran/M2/insitu/FUnTiDES-lite/visualise_snapshots.py",
+    "python": "/net/cremi/raosseiran/espaces/travail/venvs/funtides-visu/bin/python",
+    "dry_run": "False",
+    "extra": "[]",
+    "labels": "{50: 'S', 100: 'M', 200: 'L'}"
+  }
+}

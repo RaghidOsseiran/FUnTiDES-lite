@@ -1,0 +1,7 @@
+date:        2026-11-02T08:48:08+01:00
+host:        holtzman
+repo commit: b2a46d6 on TP2-slices
+kokkos:      4.7.04
+build type:  Release
+nvcc:        Build cuda_13.4.r13.4/compiler.38855100_0
+gpu:         GPU 0: NVIDIA RTX 4000 Ada Generation (UUID: GPU-146521b2-3f64-ac63-981e-8e38426eff7d)
