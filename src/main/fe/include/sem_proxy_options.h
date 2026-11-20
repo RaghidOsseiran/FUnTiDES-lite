@@ -38,6 +38,15 @@ class SemProxyOptions
 
   std::string seismogramsFolder = "seismograms_recording";
 
+  // z-slices: written at every snapshot output step (same snapshotsInterval)
+  bool useSlices = false;
+  std::string slicesFolder = "slices";
+  float sliceZ = srcz;  // default: source z
+
+  // flush each snapshot/slice file to disk (fsync) inside the timed region
+  bool syncWrites = false;
+  std::string metricsFile = "metrics.json";
+
   int inSituInterval = 1;
   bool inSituStats = false;
   bool inSituQuart = false;
@@ -57,6 +66,12 @@ class SemProxyOptions
         !(std::filesystem::exists(snapshotsFolder) && std::filesystem::is_directory(snapshotsFolder)))
         throw std::runtime_error("snapshot folder is incorrect");
     }
+
+    // slices rely on the structured numbering i + j*nx + k*nx*ny
+    if (useSlices && mesh != "cartesian")
+      throw std::runtime_error("--use-slices requires --mesh cartesian");
+    if (useSlices && snapshotsInterval <= 0)
+      throw std::runtime_error("snapshots-interval must be > 0");
   }
 
   // Bind CLI flags to this instance (no --help here)
@@ -104,7 +119,11 @@ class SemProxyOptions
         ("snapshots-folder", "Folder where the snapshots are stored", cxxopts::value<std::string>(o.snapshotsFolder))
         ("snapshots-use-headers", "Use headers for the snapshots points", cxxopts::value<bool>(o.snapshotsUseHeaders))
         ("snapshots-use-csv", "Use csv for the snapshots format", cxxopts::value<bool>(o.snapshotsUseCSV))
-
+        ("use-slices", "Write a z-slice at every snapshot output step (snapshots-interval)", cxxopts::value<bool>(o.useSlices))
+        ("slices-folder", "Folder where the slices are stored (created if missing)", cxxopts::value<std::string>(o.slicesFolder))
+        ("slice-z", "z of the slice in m, snapped to the nearest node layer (default: source z)", cxxopts::value<float>(o.sliceZ))
+        ("sync-writes", "fsync each snapshot/slice file after writing it (timed)", cxxopts::value<bool>(o.syncWrites))
+        ("metrics-file", "JSON file where run timers and byte counts are written", cxxopts::value<std::string>(o.metricsFile))
         ("ins-interval", "In situ timestep interval (default 1)", cxxopts::value<int>(o.inSituInterval))
         ("ins-compute-stats", "Compute the stats of all values in-situ", cxxopts::value<bool>(o.inSituStats))
         ("ins-compute-quartiles", "Compute the values of quartiles (1st, 2nd, 3rd)", cxxopts::value<bool>(o.inSituQuart))

@@ -37,6 +37,9 @@ void compute(SEMproxy& semsim)
        << (endSaveSeismosTime - startSaveSeismosTime).count() / 1E9 << " seconds."
        << endl;
   // cout << "LoC : " << semsim.getSeismosLoC() << endl;
+
+  // after the timing prints, so it is not counted in the times above
+  semsim.writeMetrics();
 };
 
 void compute_loop(SEMproxy& semsim) { compute(semsim); }
@@ -61,6 +64,11 @@ int main(int argc, char* argv[])
     SemProxyOptions::bind_cli(options, opt);
 
     auto result = options.parse(argc, argv);
+
+    // allow_unrecognised_options() also hides typos: report them
+    for (const auto& arg : result.unmatched())
+      if (arg.rfind("--kokkos", 0) != 0)
+        std::cerr << "WARNING: unrecognised option ignored: " << arg << "\n";
 
     if (result.count("help"))
     {
