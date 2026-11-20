@@ -54,7 +54,7 @@ namespace Piloting {
       while(remove(filename_.c_str()));
     }
 
-    /* I dont want to think about this */
+    /* Just so that we can still use the pilotingmap even if piloting is not enabled, for simplicity */
     PilotingOptions mocked;
     PilotingOptions* opts = &mocked;
 
