@@ -1,0 +1,1 @@
+bench_slices.py --outdir ./bench_SML_bin_header_sync --snap-format bin-header --sync both --receivers receiver_positions.txt

@@ -1,0 +1,6 @@
+15 snapshots (bin, <f4), grid 201 x 201 x 201, steps 0..1400, dt = 0.001 s, 19 receivers
+benchmark: volume mode, cut at z = 1010 m, 15 files x 3 passes
+pass 1: 1948.944 MB read, read 15.818081 s, cut 1.783101 s, stats 0.524150 s, total 18.125333 s
+pass 2: 1948.944 MB read, read 0.283349 s, cut 1.787000 s, stats 0.531743 s, total 2.602092 s
+pass 3: 1948.944 MB read, read 0.284542 s, cut 1.786429 s, stats 0.533743 s, total 2.604714 s
+written /autofs/unitytravail/travail/raosseiran/M2/insitu/FUnTiDES-lite/bench_SML/runs/100_snap_r3/visu_bench_volume.csv

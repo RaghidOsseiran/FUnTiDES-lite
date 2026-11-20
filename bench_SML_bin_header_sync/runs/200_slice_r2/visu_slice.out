@@ -1,0 +1,6 @@
+15 slices (slice, <f4), grid 401 x 401 at z = 1010 m (layer k = 202), steps 0..1400, dt = 0.001 s, 19 receivers
+benchmark: slice mode, slice files at z = 1010 m, 15 files x 3 passes
+pass 1: 9.648 MB read, read 0.006015 s, cut n/a, stats 0.003417 s, total 0.009435 s
+pass 2: 9.648 MB read, read 0.003109 s, cut n/a, stats 0.003165 s, total 0.006276 s
+pass 3: 9.648 MB read, read 0.002626 s, cut n/a, stats 0.002204 s, total 0.004831 s
+written /autofs/unitytravail/travail/raosseiran/M2/insitu/FUnTiDES-lite/bench_SML_bin_header_sync/runs/200_slice_r2/visu_bench_slice.csv

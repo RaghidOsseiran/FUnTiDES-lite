@@ -1,0 +1,84 @@
++==================================+
+| Initializing SEM Application ... |
++==================================+
+
+Allocate host memory for source and pressure values ...
+All source are currently are coded on middle element.
+Sample 0	: sourceTerm = 0.478306
+Sample 100	: sourceTerm = 164.67
+Sample 200	: sourceTerm = -493.48
+Sample 300	: sourceTerm = 164.67
+Sample 400	: sourceTerm = 0.478306
+Sample 500	: sourceTerm = 4.86051e-06
+Sample 600	: sourceTerm = 0
+Sample 700	: sourceTerm = 0
+Sample 800	: sourceTerm = 0
+Sample 900	: sourceTerm = 0
+Sample 1000	: sourceTerm = 0
+Sample 1100	: sourceTerm = 0
+Sample 1200	: sourceTerm = 0
+Sample 1300	: sourceTerm = 0
+Sample 1400	: sourceTerm = 0
+Element number for the source location: 505050
+
+Number of node is 8120601
+Number of element is 1000000
+Launching the Method sem, the implementation makutu and the mesh is cartesian
+Model is on elements
+Physics type is acoustic
+Order of approximation will be 2
+Time step is 0.001s
+Simulated time is 1.5s
+
++================================= 
+| Running SEM Application ...      
++================================= 
+
+TimeStep=0;  pnGlobal @ elementSource location 505050 after computeOneStep = 0
+TimeStep=50;  pnGlobal @ elementSource location 505050 after computeOneStep = 0.0445568
+TimeStep=100;  pnGlobal @ elementSource location 505050 after computeOneStep = 0.545776
+TimeStep=150;  pnGlobal @ elementSource location 505050 after computeOneStep = 0.73782
+TimeStep=200;  pnGlobal @ elementSource location 505050 after computeOneStep = -2.04422
+TimeStep=250;  pnGlobal @ elementSource location 505050 after computeOneStep = -0.364576
+TimeStep=300;  pnGlobal @ elementSource location 505050 after computeOneStep = 0.915395
+TimeStep=350;  pnGlobal @ elementSource location 505050 after computeOneStep = 0.159309
+TimeStep=400;  pnGlobal @ elementSource location 505050 after computeOneStep = 0.00537646
+TimeStep=450;  pnGlobal @ elementSource location 505050 after computeOneStep = 4.28495e-05
+TimeStep=500;  pnGlobal @ elementSource location 505050 after computeOneStep = -6.80277e-06
+TimeStep=550;  pnGlobal @ elementSource location 505050 after computeOneStep = -8.61577e-06
+TimeStep=600;  pnGlobal @ elementSource location 505050 after computeOneStep = -6.11143e-06
+TimeStep=650;  pnGlobal @ elementSource location 505050 after computeOneStep = -1.59358e-06
+TimeStep=700;  pnGlobal @ elementSource location 505050 after computeOneStep = 5.56723e-07
+TimeStep=750;  pnGlobal @ elementSource location 505050 after computeOneStep = 1.59843e-07
+TimeStep=800;  pnGlobal @ elementSource location 505050 after computeOneStep = -9.29234e-07
+TimeStep=850;  pnGlobal @ elementSource location 505050 after computeOneStep = -2.09479e-07
+TimeStep=900;  pnGlobal @ elementSource location 505050 after computeOneStep = 1.88848e-06
+TimeStep=950;  pnGlobal @ elementSource location 505050 after computeOneStep = 3.34075e-06
+TimeStep=1000;  pnGlobal @ elementSource location 505050 after computeOneStep = 3.00861e-06
+TimeStep=1050;  pnGlobal @ elementSource location 505050 after computeOneStep = 1.48946e-06
+TimeStep=1100;  pnGlobal @ elementSource location 505050 after computeOneStep = 1.9822e-07
+TimeStep=1150;  pnGlobal @ elementSource location 505050 after computeOneStep = 1.30027e-07
+TimeStep=1200;  pnGlobal @ elementSource location 505050 after computeOneStep = 4.09782e-07
+TimeStep=1250;  pnGlobal @ elementSource location 505050 after computeOneStep = 6.7037e-08
+TimeStep=1300;  pnGlobal @ elementSource location 505050 after computeOneStep = -3.65077e-06
+TimeStep=1350;  pnGlobal @ elementSource location 505050 after computeOneStep = 0.000543019
+TimeStep=1400;  pnGlobal @ elementSource location 505050 after computeOneStep = 0.0124416
+TimeStep=1450;  pnGlobal @ elementSource location 505050 after computeOneStep = 0.0504582
+------------------------------------------------ 
+
+---- Elapsed Kernel Time : 2.90462 seconds.
+---- Elapsed Recording Seismos Time : 0.069335 seconds.
+---- Elapsed Output Time : 0.070488 seconds.
+------------------------------------------------ 
+
++================================= 
+| SEM Application Finished.       
++================================= 
+
+Sismo save successfully at : "/autofs/unitytravail/travail/raosseiran/M2/insitu/FUnTiDES-lite/bench_SML/runs/100_none_r1/seismos/seismogram_recording.csv"
+Elapsed Initial Time : 0.204447 seconds.
+Elapsed Compute Time : 2.99644 seconds.
+Elapsed Saving Seismos Time : 0.0212876 seconds.
+Metrics save successfully at : "/autofs/unitytravail/travail/raosseiran/M2/insitu/FUnTiDES-lite/bench_SML/runs/100_none_r1/metrics.json"
+Elapsed TotalExe Time : 3.20811 seconds.
+

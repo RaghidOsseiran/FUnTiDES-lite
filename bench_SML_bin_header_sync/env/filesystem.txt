@@ -1,0 +1,2 @@
+Sys. de fichiers      Type Taille Utilisé Dispo Uti% Monté sur
+unitytravail:/travail nfs     99G     17G   83G  17% /autofs/unitytravail/travail
