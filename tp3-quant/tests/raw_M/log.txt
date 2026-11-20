@@ -1,0 +1,105 @@
+
+Kokkos::Cuda::initialize WARNING: Cuda is allocating into UVMSpace by default
+                                  without setting CUDA_MANAGED_FORCE_DEVICE_ALLOC=1 or
+                                  setting CUDA_VISIBLE_DEVICES.
+                                  This could on multi GPU systems lead to severe performance"
+                                  penalties.
++==================================+
+| Initializing SEM Application ... |
++==================================+
+
+Allocate host memory for source and pressure values ...
+All source are currently are coded on middle element.
+Sample 0	: sourceTerm = 0.478306
+Sample 100	: sourceTerm = 164.67
+Sample 200	: sourceTerm = -493.48
+Sample 300	: sourceTerm = 164.67
+Sample 400	: sourceTerm = 0.478306
+Sample 500	: sourceTerm = 4.86051e-06
+Sample 600	: sourceTerm = 0
+Sample 700	: sourceTerm = 0
+Sample 800	: sourceTerm = 0
+Sample 900	: sourceTerm = 0
+Sample 1000	: sourceTerm = 0
+Sample 1100	: sourceTerm = 0
+Sample 1200	: sourceTerm = 0
+Sample 1300	: sourceTerm = 0
+Sample 1400	: sourceTerm = 0
+Element number for the source location: 505050
+
+Number of node is 8120601
+Number of element is 1000000
+Launching the Method sem, the implementation makutu and the mesh is cartesian
+Model is on elements
+Physics type is acoustic
+Order of approximation will be 2
+Time step is 0.001s
+Simulated time is 1.5s
+
++================================= 
+| Running SEM Application ...      
++================================= 
+
+TimeStep=0;  pnGlobal @ elementSource location 505050 after computeOneStep = 0
+Elapsed Saving Snapshot Time : 1.32866 seconds.
+TimeStep=50;  pnGlobal @ elementSource location 505050 after computeOneStep = 0.0445568
+TimeStep=100;  pnGlobal @ elementSource location 505050 after computeOneStep = 0.545776
+Elapsed Saving Snapshot Time : 0.307022 seconds.
+TimeStep=150;  pnGlobal @ elementSource location 505050 after computeOneStep = 0.737819
+TimeStep=200;  pnGlobal @ elementSource location 505050 after computeOneStep = -2.04422
+Elapsed Saving Snapshot Time : 0.307875 seconds.
+TimeStep=250;  pnGlobal @ elementSource location 505050 after computeOneStep = -0.364576
+TimeStep=300;  pnGlobal @ elementSource location 505050 after computeOneStep = 0.915395
+Elapsed Saving Snapshot Time : 0.308154 seconds.
+TimeStep=350;  pnGlobal @ elementSource location 505050 after computeOneStep = 0.159309
+TimeStep=400;  pnGlobal @ elementSource location 505050 after computeOneStep = 0.00537605
+Elapsed Saving Snapshot Time : 0.307685 seconds.
+TimeStep=450;  pnGlobal @ elementSource location 505050 after computeOneStep = 4.28894e-05
+TimeStep=500;  pnGlobal @ elementSource location 505050 after computeOneStep = -6.44629e-06
+Elapsed Saving Snapshot Time : 0.306973 seconds.
+TimeStep=550;  pnGlobal @ elementSource location 505050 after computeOneStep = -8.64889e-06
+TimeStep=600;  pnGlobal @ elementSource location 505050 after computeOneStep = -6.15824e-06
+Elapsed Saving Snapshot Time : 0.304233 seconds.
+TimeStep=650;  pnGlobal @ elementSource location 505050 after computeOneStep = -1.7382e-06
+TimeStep=700;  pnGlobal @ elementSource location 505050 after computeOneStep = 3.99021e-07
+Elapsed Saving Snapshot Time : 0.307843 seconds.
+TimeStep=750;  pnGlobal @ elementSource location 505050 after computeOneStep = 8.13787e-08
+TimeStep=800;  pnGlobal @ elementSource location 505050 after computeOneStep = -8.49567e-07
+Elapsed Saving Snapshot Time : 0.307707 seconds.
+TimeStep=850;  pnGlobal @ elementSource location 505050 after computeOneStep = -2.75971e-07
+TimeStep=900;  pnGlobal @ elementSource location 505050 after computeOneStep = 1.8801e-06
+Elapsed Saving Snapshot Time : 0.305924 seconds.
+TimeStep=950;  pnGlobal @ elementSource location 505050 after computeOneStep = 3.36354e-06
+TimeStep=1000;  pnGlobal @ elementSource location 505050 after computeOneStep = 3.03803e-06
+Elapsed Saving Snapshot Time : 0.405234 seconds.
+TimeStep=1050;  pnGlobal @ elementSource location 505050 after computeOneStep = 1.549e-06
+TimeStep=1100;  pnGlobal @ elementSource location 505050 after computeOneStep = 1.97274e-07
+Elapsed Saving Snapshot Time : 0.404496 seconds.
+TimeStep=1150;  pnGlobal @ elementSource location 505050 after computeOneStep = 1.3269e-07
+TimeStep=1200;  pnGlobal @ elementSource location 505050 after computeOneStep = 4.17812e-07
+Elapsed Saving Snapshot Time : 0.408838 seconds.
+TimeStep=1250;  pnGlobal @ elementSource location 505050 after computeOneStep = 8.65681e-08
+TimeStep=1300;  pnGlobal @ elementSource location 505050 after computeOneStep = -3.59378e-06
+Elapsed Saving Snapshot Time : 0.394089 seconds.
+TimeStep=1350;  pnGlobal @ elementSource location 505050 after computeOneStep = 0.000543002
+TimeStep=1400;  pnGlobal @ elementSource location 505050 after computeOneStep = 0.0124415
+Elapsed Saving Snapshot Time : 0.395782 seconds.
+TimeStep=1450;  pnGlobal @ elementSource location 505050 after computeOneStep = 0.0504583
+------------------------------------------------ 
+
+---- Elapsed Kernel Time : 3.05442 seconds.
+---- Elapsed Recording Seismos Time : 0.091969 seconds.
+---- Elapsed Output Time : 6.19702 seconds.
+------------------------------------------------ 
+
++================================= 
+| SEM Application Finished.       
++================================= 
+
+Sismo save successfully at : "/net/cremi/raosseiran/espaces/travail/tp3-compression/tests/raw_M/seismos/seismogram_recording.csv"
+Elapsed Initial Time : 0.275895 seconds.
+Elapsed Compute Time : 9.27443 seconds.
+Elapsed Saving Seismos Time : 0.0229461 seconds.
+Metrics save successfully at : "/net/cremi/raosseiran/espaces/travail/tp3-compression/tests/raw_M/metrics.json"
+Elapsed TotalExe Time : 9.55788 seconds.
+

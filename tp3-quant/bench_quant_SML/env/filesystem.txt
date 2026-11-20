@@ -1,0 +1,7 @@
+Sys. de fichiers      Type Taille Utilisé Dispo Uti% Monté sur
+unitytravail:/travail nfs     99G     17G   83G  17% /autofs/unitytravail/travail
+/etc/auto.netapp /autofs/netapp autofs rw,relatime,fd=7,pgrp=2041,timeout=300,minproto=5,maxproto=5,indirect,pipe_ino=14303 0 0
+/etc/auto.unityaccount /autofs/unityaccount autofs rw,relatime,fd=10,pgrp=2041,timeout=300,minproto=5,maxproto=5,indirect,pipe_ino=21771 0 0
+/etc/auto.unitytravail /autofs/unitytravail autofs rw,relatime,fd=13,pgrp=2041,timeout=300,minproto=5,maxproto=5,indirect,pipe_ino=19037 0 0
+unityaccount:/account /autofs/unityaccount/cremi nfs rw,relatime,vers=3,rsize=131072,wsize=131072,namlen=255,hard,fatal_neterrors=none,proto=tcp,timeo=600,retrans=2,sec=sys,mountaddr=10.0.220.51,mountvers=3,mountport=1234,mountproto=tcp,local_lock=none,addr=10.0.220.51 0 0
+unitytravail:/travail /autofs/unitytravail/travail nfs rw,relatime,vers=3,rsize=131072,wsize=131072,namlen=255,hard,fatal_neterrors=none,proto=tcp,timeo=600,retrans=2,sec=sys,mountaddr=10.0.220.52,mountvers=3,mountport=1234,mountproto=tcp,local_lock=none,addr=10.0.220.52 0 0

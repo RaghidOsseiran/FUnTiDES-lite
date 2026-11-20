@@ -1,0 +1,100 @@
++==================================+
+| Initializing SEM Application ... |
++==================================+
+
+Allocate host memory for source and pressure values ...
+All source are currently are coded on middle element.
+Sample 0	: sourceTerm = 0.478306
+Sample 100	: sourceTerm = 164.67
+Sample 200	: sourceTerm = -493.48
+Sample 300	: sourceTerm = 164.67
+Sample 400	: sourceTerm = 0.478306
+Sample 500	: sourceTerm = 4.86051e-06
+Sample 600	: sourceTerm = 0
+Sample 700	: sourceTerm = 0
+Sample 800	: sourceTerm = 0
+Sample 900	: sourceTerm = 0
+Sample 1000	: sourceTerm = 0
+Sample 1100	: sourceTerm = 0
+Sample 1200	: sourceTerm = 0
+Sample 1300	: sourceTerm = 0
+Sample 1400	: sourceTerm = 0
+Element number for the source location: 505050
+
+Number of node is 8120601
+Number of element is 1000000
+Launching the Method sem, the implementation makutu and the mesh is cartesian
+Model is on elements
+Physics type is acoustic
+Order of approximation will be 2
+Time step is 0.001s
+Simulated time is 1.5s
+Quantized snapshots: uint12 (12 bits/value), bounds snapshot, computed on host, 12180902 payload bytes per snapshot
+
++================================= 
+| Running SEM Application ...      
++================================= 
+
+TimeStep=0;  pnGlobal @ elementSource location 505050 after computeOneStep = 0
+Elapsed Saving Quantized Snapshot Time : 0.133405 seconds.
+TimeStep=50;  pnGlobal @ elementSource location 505050 after computeOneStep = 0.0445568
+TimeStep=100;  pnGlobal @ elementSource location 505050 after computeOneStep = 0.545776
+Elapsed Saving Quantized Snapshot Time : 0.133471 seconds.
+TimeStep=150;  pnGlobal @ elementSource location 505050 after computeOneStep = 0.73782
+TimeStep=200;  pnGlobal @ elementSource location 505050 after computeOneStep = -2.04422
+Elapsed Saving Quantized Snapshot Time : 0.133334 seconds.
+TimeStep=250;  pnGlobal @ elementSource location 505050 after computeOneStep = -0.364575
+TimeStep=300;  pnGlobal @ elementSource location 505050 after computeOneStep = 0.915395
+Elapsed Saving Quantized Snapshot Time : 0.133989 seconds.
+TimeStep=350;  pnGlobal @ elementSource location 505050 after computeOneStep = 0.159309
+TimeStep=400;  pnGlobal @ elementSource location 505050 after computeOneStep = 0.00537623
+Elapsed Saving Quantized Snapshot Time : 0.220445 seconds.
+TimeStep=450;  pnGlobal @ elementSource location 505050 after computeOneStep = 4.31212e-05
+TimeStep=500;  pnGlobal @ elementSource location 505050 after computeOneStep = -6.6448e-06
+Elapsed Saving Quantized Snapshot Time : 0.217133 seconds.
+TimeStep=550;  pnGlobal @ elementSource location 505050 after computeOneStep = -8.81963e-06
+TimeStep=600;  pnGlobal @ elementSource location 505050 after computeOneStep = -6.26716e-06
+Elapsed Saving Quantized Snapshot Time : 0.222405 seconds.
+TimeStep=650;  pnGlobal @ elementSource location 505050 after computeOneStep = -1.7701e-06
+TimeStep=700;  pnGlobal @ elementSource location 505050 after computeOneStep = 3.01685e-07
+Elapsed Saving Quantized Snapshot Time : 0.220239 seconds.
+TimeStep=750;  pnGlobal @ elementSource location 505050 after computeOneStep = 1.38762e-07
+TimeStep=800;  pnGlobal @ elementSource location 505050 after computeOneStep = -7.09756e-07
+Elapsed Saving Quantized Snapshot Time : 0.213043 seconds.
+TimeStep=850;  pnGlobal @ elementSource location 505050 after computeOneStep = -2.74061e-07
+TimeStep=900;  pnGlobal @ elementSource location 505050 after computeOneStep = 1.80923e-06
+Elapsed Saving Quantized Snapshot Time : 0.223169 seconds.
+TimeStep=950;  pnGlobal @ elementSource location 505050 after computeOneStep = 3.3443e-06
+TimeStep=1000;  pnGlobal @ elementSource location 505050 after computeOneStep = 3.07418e-06
+Elapsed Saving Quantized Snapshot Time : 0.224308 seconds.
+TimeStep=1050;  pnGlobal @ elementSource location 505050 after computeOneStep = 1.4456e-06
+TimeStep=1100;  pnGlobal @ elementSource location 505050 after computeOneStep = 1.73838e-07
+Elapsed Saving Quantized Snapshot Time : 0.21644 seconds.
+TimeStep=1150;  pnGlobal @ elementSource location 505050 after computeOneStep = 1.25962e-07
+TimeStep=1200;  pnGlobal @ elementSource location 505050 after computeOneStep = 4.05759e-07
+Elapsed Saving Quantized Snapshot Time : 0.217677 seconds.
+TimeStep=1250;  pnGlobal @ elementSource location 505050 after computeOneStep = 1.20259e-07
+TimeStep=1300;  pnGlobal @ elementSource location 505050 after computeOneStep = -3.66374e-06
+Elapsed Saving Quantized Snapshot Time : 0.210335 seconds.
+TimeStep=1350;  pnGlobal @ elementSource location 505050 after computeOneStep = 0.000543031
+TimeStep=1400;  pnGlobal @ elementSource location 505050 after computeOneStep = 0.0124415
+Elapsed Saving Quantized Snapshot Time : 0.209234 seconds.
+TimeStep=1450;  pnGlobal @ elementSource location 505050 after computeOneStep = 0.0504583
+------------------------------------------------ 
+
+---- Elapsed Kernel Time : 3.08811 seconds.
+---- Elapsed Recording Seismos Time : 0.101257 seconds.
+---- Elapsed Output Time : 3.03657 seconds.
+------------------------------------------------ 
+
++================================= 
+| SEM Application Finished.       
++================================= 
+
+Sismo save successfully at : "/autofs/unitytravail/travail/raosseiran/tp3-compression/bench_quant_SML/runs/100_uint12_host_r1/seismos/seismogram_recording.csv"
+Elapsed Initial Time : 0.22718 seconds.
+Elapsed Compute Time : 6.14997 seconds.
+Elapsed Saving Seismos Time : 0.0252434 seconds.
+Metrics save successfully at : "/autofs/unitytravail/travail/raosseiran/tp3-compression/bench_quant_SML/runs/100_uint12_host_r1/metrics.json"
+Elapsed TotalExe Time : 6.38435 seconds.
+

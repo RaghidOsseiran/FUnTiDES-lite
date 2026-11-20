@@ -1,0 +1,19 @@
+kind     bounds      step      max|p|  RMSE/max|p|  maxerr/max|p|   ratio  outside
+uint16   symmetric      0  2.3942e-05   4.0208e-08     1.2434e-05   2.000        0
+uint16   symmetric    100  6.4613e-01   5.3448e-07     1.5257e-05   2.000        0
+uint16   symmetric    200  2.3640e+00   1.1216e-06     1.5259e-05   2.000        0
+uint16   symmetric    300  1.0114e+00   2.0692e-06     1.5263e-05   2.000        0
+uint16   symmetric    400  1.3201e-01   3.3934e-06     1.5267e-05   2.000        0
+uint16   symmetric    500  8.7665e-02   4.6514e-06     1.5298e-05   2.000        0
+uint16   symmetric    600  6.5660e-02   6.0001e-06     1.5262e-05   2.000        0
+uint16   symmetric    700  5.2499e-02   7.2664e-06     1.5261e-05   2.000        0
+uint16   symmetric    800  4.3744e-02   8.1614e-06     1.5265e-05   2.000        0
+uint16   symmetric    900  7.4524e-02   8.6458e-06     1.5296e-05   2.000        0
+uint16   symmetric   1000  6.5396e-02   8.7812e-06     1.5267e-05   2.000        0
+uint16   symmetric   1100  5.8190e-02   8.8045e-06     1.5269e-05   2.000        0
+uint16   symmetric   1200  1.0453e-01   8.8205e-06     1.5262e-05   2.000        0
+uint16   symmetric   1300  8.9237e-02   8.8114e-06     1.5279e-05   2.000        0
+uint16   symmetric   1400  8.7368e-02   8.8155e-06     1.5265e-05   2.000        0
+
+uint16 / symmetric: 15 snapshots, ratio 2.000 (61818060 -> 30910110 bytes); per snapshot: worst RMSE/max|p| 8.821e-06, worst maxerr/max|p| 1.530e-05; whole run (normalised by the run's max|p| = 2.3640e+00): RMSE 4.285e-07, maxerr 1.526e-05
+written /net/cremi/raosseiran/espaces/travail/tp3-compression/tests/func/eval_uint16_symmetric_gpu.csv

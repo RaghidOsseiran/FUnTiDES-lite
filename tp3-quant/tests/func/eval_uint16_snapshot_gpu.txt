@@ -1,0 +1,19 @@
+kind     bounds      step      max|p|  RMSE/max|p|  maxerr/max|p|   ratio  outside
+uint16   snapshot       0  2.3942e-05   5.1053e-06     6.7617e-06   2.000        0
+uint16   snapshot     100  6.4613e-01   6.3078e-07     7.6268e-06   2.000        0
+uint16   snapshot     200  2.3640e+00   6.2971e-07     8.1407e-06   2.000        0
+uint16   snapshot     300  1.0114e+00   1.6383e-06     9.6707e-06   2.000        0
+uint16   snapshot     400  1.3201e-01   1.0674e-05     1.3320e-05   2.000        0
+uint16   snapshot     500  8.7665e-02   6.1648e-06     1.2323e-05   2.000        0
+uint16   snapshot     600  6.5660e-02   4.8188e-06     1.1929e-05   2.000        0
+uint16   snapshot     700  5.2499e-02   7.1658e-06     1.1779e-05   2.000        0
+uint16   snapshot     800  4.3744e-02   7.9275e-06     1.3562e-05   2.000        0
+uint16   snapshot     900  7.4524e-02   6.3213e-06     1.1097e-05   2.000        0
+uint16   snapshot    1000  6.5396e-02   6.6646e-06     1.1507e-05   2.000        0
+uint16   snapshot    1100  5.8190e-02   7.9918e-06     1.3892e-05   2.000        0
+uint16   snapshot    1200  1.0453e-01   6.3886e-06     1.1066e-05   2.000        0
+uint16   snapshot    1300  8.9237e-02   7.7944e-06     1.3526e-05   2.000        0
+uint16   snapshot    1400  8.7368e-02   7.1324e-06     1.2365e-05   2.000        0
+
+uint16 / snapshot: 15 snapshots, ratio 2.000 (61818060 -> 30910110 bytes); per snapshot: worst RMSE/max|p| 1.067e-05, worst maxerr/max|p| 1.389e-05; whole run (normalised by the run's max|p| = 2.3640e+00): RMSE 3.404e-07, maxerr 8.141e-06
+written /net/cremi/raosseiran/espaces/travail/tp3-compression/tests/func/eval_uint16_snapshot_gpu.csv

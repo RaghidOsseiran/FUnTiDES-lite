@@ -1,0 +1,22 @@
+semproxy: /autofs/unitytravail/travail/raosseiran/tp3-compression/build/bin/semproxy
+binary: -rwxr-xr-x 1 raosseiran grp30001 826816 2026-11-16 17:01:40.390533000 +0100 /autofs/unitytravail/travail/raosseiran/tp3-compression/build/bin/semproxy
+sha256: 256ac14d12919254b50945df04f618500c917145e2a3df0a39132c0844bdf13c  /autofs/unitytravail/travail/raosseiran/tp3-compression/build/bin/semproxy
+cmake cache:
+CMAKE_BUILD_TYPE:STRING=Release
+CMAKE_CUDA_COMPILER:STRING=/usr/local/cuda-13.4/bin/nvcc
+ENABLE_CUDA:BOOL=ON
+Kokkos_ARCH_ADA89:BOOL=ON
+Kokkos_ENABLE_CUDA:BOOL=ON
+Kokkos_ENABLE_CUDA_CONSTEXPR:BOOL=ON
+Kokkos_ENABLE_CUDA_LAMBDA:BOOL=ON
+Kokkos_ENABLE_CUDA_LDG_INTRINSIC:BOOL=OFF
+Kokkos_ENABLE_CUDA_RELOCATABLE_DEVICE_CODE:BOOL=OFF
+Kokkos_ENABLE_CUDA_RELOCATE_DEVICE_CODE:BOOL=OFF
+Kokkos_ENABLE_CUDA_UVM:BOOL=ON
+Kokkos_ENABLE_OPENMP:BOOL=ON
+Kokkos_ENABLE_SERIAL:BOOL=ON
+USE_KOKKOS:BOOL=ON
+USE_KOKKOS_TEAMS:BOOL=OFF
+USE_VECTOR:BOOL=OFF
+kokkos: 4.7.04
+nvcc: Build cuda_13.4.r13.4/compiler.38855100_0

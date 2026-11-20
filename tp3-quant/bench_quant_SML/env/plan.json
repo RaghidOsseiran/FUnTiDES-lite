@@ -1,0 +1,980 @@
+{
+  "runs": [
+    {
+      "config": "S",
+      "size": 50,
+      "variant": "none",
+      "kind": "",
+      "where": "",
+      "rep": 1,
+      "position": 1,
+      "name": "50_none_r1"
+    },
+    {
+      "config": "S",
+      "size": 50,
+      "variant": "raw",
+      "kind": "",
+      "where": "",
+      "rep": 1,
+      "position": 2,
+      "name": "50_raw_r1"
+    },
+    {
+      "config": "S",
+      "size": 50,
+      "variant": "uint8_gpu",
+      "kind": "uint8",
+      "where": "gpu",
+      "rep": 1,
+      "position": 3,
+      "name": "50_uint8_gpu_r1"
+    },
+    {
+      "config": "S",
+      "size": 50,
+      "variant": "uint8_host",
+      "kind": "uint8",
+      "where": "host",
+      "rep": 1,
+      "position": 4,
+      "name": "50_uint8_host_r1"
+    },
+    {
+      "config": "S",
+      "size": 50,
+      "variant": "uint12_gpu",
+      "kind": "uint12",
+      "where": "gpu",
+      "rep": 1,
+      "position": 5,
+      "name": "50_uint12_gpu_r1"
+    },
+    {
+      "config": "S",
+      "size": 50,
+      "variant": "uint12_host",
+      "kind": "uint12",
+      "where": "host",
+      "rep": 1,
+      "position": 6,
+      "name": "50_uint12_host_r1"
+    },
+    {
+      "config": "S",
+      "size": 50,
+      "variant": "uint16_gpu",
+      "kind": "uint16",
+      "where": "gpu",
+      "rep": 1,
+      "position": 7,
+      "name": "50_uint16_gpu_r1"
+    },
+    {
+      "config": "S",
+      "size": 50,
+      "variant": "uint16_host",
+      "kind": "uint16",
+      "where": "host",
+      "rep": 1,
+      "position": 8,
+      "name": "50_uint16_host_r1"
+    },
+    {
+      "config": "S",
+      "size": 50,
+      "variant": "float16_gpu",
+      "kind": "float16",
+      "where": "gpu",
+      "rep": 1,
+      "position": 9,
+      "name": "50_float16_gpu_r1"
+    },
+    {
+      "config": "S",
+      "size": 50,
+      "variant": "float16_host",
+      "kind": "float16",
+      "where": "host",
+      "rep": 1,
+      "position": 10,
+      "name": "50_float16_host_r1"
+    },
+    {
+      "config": "S",
+      "size": 50,
+      "variant": "raw",
+      "kind": "",
+      "where": "",
+      "rep": 2,
+      "position": 1,
+      "name": "50_raw_r2"
+    },
+    {
+      "config": "S",
+      "size": 50,
+      "variant": "uint8_gpu",
+      "kind": "uint8",
+      "where": "gpu",
+      "rep": 2,
+      "position": 2,
+      "name": "50_uint8_gpu_r2"
+    },
+    {
+      "config": "S",
+      "size": 50,
+      "variant": "uint8_host",
+      "kind": "uint8",
+      "where": "host",
+      "rep": 2,
+      "position": 3,
+      "name": "50_uint8_host_r2"
+    },
+    {
+      "config": "S",
+      "size": 50,
+      "variant": "uint12_gpu",
+      "kind": "uint12",
+      "where": "gpu",
+      "rep": 2,
+      "position": 4,
+      "name": "50_uint12_gpu_r2"
+    },
+    {
+      "config": "S",
+      "size": 50,
+      "variant": "uint12_host",
+      "kind": "uint12",
+      "where": "host",
+      "rep": 2,
+      "position": 5,
+      "name": "50_uint12_host_r2"
+    },
+    {
+      "config": "S",
+      "size": 50,
+      "variant": "uint16_gpu",
+      "kind": "uint16",
+      "where": "gpu",
+      "rep": 2,
+      "position": 6,
+      "name": "50_uint16_gpu_r2"
+    },
+    {
+      "config": "S",
+      "size": 50,
+      "variant": "uint16_host",
+      "kind": "uint16",
+      "where": "host",
+      "rep": 2,
+      "position": 7,
+      "name": "50_uint16_host_r2"
+    },
+    {
+      "config": "S",
+      "size": 50,
+      "variant": "float16_gpu",
+      "kind": "float16",
+      "where": "gpu",
+      "rep": 2,
+      "position": 8,
+      "name": "50_float16_gpu_r2"
+    },
+    {
+      "config": "S",
+      "size": 50,
+      "variant": "float16_host",
+      "kind": "float16",
+      "where": "host",
+      "rep": 2,
+      "position": 9,
+      "name": "50_float16_host_r2"
+    },
+    {
+      "config": "S",
+      "size": 50,
+      "variant": "none",
+      "kind": "",
+      "where": "",
+      "rep": 2,
+      "position": 10,
+      "name": "50_none_r2"
+    },
+    {
+      "config": "S",
+      "size": 50,
+      "variant": "uint8_gpu",
+      "kind": "uint8",
+      "where": "gpu",
+      "rep": 3,
+      "position": 1,
+      "name": "50_uint8_gpu_r3"
+    },
+    {
+      "config": "S",
+      "size": 50,
+      "variant": "uint8_host",
+      "kind": "uint8",
+      "where": "host",
+      "rep": 3,
+      "position": 2,
+      "name": "50_uint8_host_r3"
+    },
+    {
+      "config": "S",
+      "size": 50,
+      "variant": "uint12_gpu",
+      "kind": "uint12",
+      "where": "gpu",
+      "rep": 3,
+      "position": 3,
+      "name": "50_uint12_gpu_r3"
+    },
+    {
+      "config": "S",
+      "size": 50,
+      "variant": "uint12_host",
+      "kind": "uint12",
+      "where": "host",
+      "rep": 3,
+      "position": 4,
+      "name": "50_uint12_host_r3"
+    },
+    {
+      "config": "S",
+      "size": 50,
+      "variant": "uint16_gpu",
+      "kind": "uint16",
+      "where": "gpu",
+      "rep": 3,
+      "position": 5,
+      "name": "50_uint16_gpu_r3"
+    },
+    {
+      "config": "S",
+      "size": 50,
+      "variant": "uint16_host",
+      "kind": "uint16",
+      "where": "host",
+      "rep": 3,
+      "position": 6,
+      "name": "50_uint16_host_r3"
+    },
+    {
+      "config": "S",
+      "size": 50,
+      "variant": "float16_gpu",
+      "kind": "float16",
+      "where": "gpu",
+      "rep": 3,
+      "position": 7,
+      "name": "50_float16_gpu_r3"
+    },
+    {
+      "config": "S",
+      "size": 50,
+      "variant": "float16_host",
+      "kind": "float16",
+      "where": "host",
+      "rep": 3,
+      "position": 8,
+      "name": "50_float16_host_r3"
+    },
+    {
+      "config": "S",
+      "size": 50,
+      "variant": "none",
+      "kind": "",
+      "where": "",
+      "rep": 3,
+      "position": 9,
+      "name": "50_none_r3"
+    },
+    {
+      "config": "S",
+      "size": 50,
+      "variant": "raw",
+      "kind": "",
+      "where": "",
+      "rep": 3,
+      "position": 10,
+      "name": "50_raw_r3"
+    },
+    {
+      "config": "M",
+      "size": 100,
+      "variant": "none",
+      "kind": "",
+      "where": "",
+      "rep": 1,
+      "position": 1,
+      "name": "100_none_r1"
+    },
+    {
+      "config": "M",
+      "size": 100,
+      "variant": "raw",
+      "kind": "",
+      "where": "",
+      "rep": 1,
+      "position": 2,
+      "name": "100_raw_r1"
+    },
+    {
+      "config": "M",
+      "size": 100,
+      "variant": "uint8_gpu",
+      "kind": "uint8",
+      "where": "gpu",
+      "rep": 1,
+      "position": 3,
+      "name": "100_uint8_gpu_r1"
+    },
+    {
+      "config": "M",
+      "size": 100,
+      "variant": "uint8_host",
+      "kind": "uint8",
+      "where": "host",
+      "rep": 1,
+      "position": 4,
+      "name": "100_uint8_host_r1"
+    },
+    {
+      "config": "M",
+      "size": 100,
+      "variant": "uint12_gpu",
+      "kind": "uint12",
+      "where": "gpu",
+      "rep": 1,
+      "position": 5,
+      "name": "100_uint12_gpu_r1"
+    },
+    {
+      "config": "M",
+      "size": 100,
+      "variant": "uint12_host",
+      "kind": "uint12",
+      "where": "host",
+      "rep": 1,
+      "position": 6,
+      "name": "100_uint12_host_r1"
+    },
+    {
+      "config": "M",
+      "size": 100,
+      "variant": "uint16_gpu",
+      "kind": "uint16",
+      "where": "gpu",
+      "rep": 1,
+      "position": 7,
+      "name": "100_uint16_gpu_r1"
+    },
+    {
+      "config": "M",
+      "size": 100,
+      "variant": "uint16_host",
+      "kind": "uint16",
+      "where": "host",
+      "rep": 1,
+      "position": 8,
+      "name": "100_uint16_host_r1"
+    },
+    {
+      "config": "M",
+      "size": 100,
+      "variant": "float16_gpu",
+      "kind": "float16",
+      "where": "gpu",
+      "rep": 1,
+      "position": 9,
+      "name": "100_float16_gpu_r1"
+    },
+    {
+      "config": "M",
+      "size": 100,
+      "variant": "float16_host",
+      "kind": "float16",
+      "where": "host",
+      "rep": 1,
+      "position": 10,
+      "name": "100_float16_host_r1"
+    },
+    {
+      "config": "M",
+      "size": 100,
+      "variant": "raw",
+      "kind": "",
+      "where": "",
+      "rep": 2,
+      "position": 1,
+      "name": "100_raw_r2"
+    },
+    {
+      "config": "M",
+      "size": 100,
+      "variant": "uint8_gpu",
+      "kind": "uint8",
+      "where": "gpu",
+      "rep": 2,
+      "position": 2,
+      "name": "100_uint8_gpu_r2"
+    },
+    {
+      "config": "M",
+      "size": 100,
+      "variant": "uint8_host",
+      "kind": "uint8",
+      "where": "host",
+      "rep": 2,
+      "position": 3,
+      "name": "100_uint8_host_r2"
+    },
+    {
+      "config": "M",
+      "size": 100,
+      "variant": "uint12_gpu",
+      "kind": "uint12",
+      "where": "gpu",
+      "rep": 2,
+      "position": 4,
+      "name": "100_uint12_gpu_r2"
+    },
+    {
+      "config": "M",
+      "size": 100,
+      "variant": "uint12_host",
+      "kind": "uint12",
+      "where": "host",
+      "rep": 2,
+      "position": 5,
+      "name": "100_uint12_host_r2"
+    },
+    {
+      "config": "M",
+      "size": 100,
+      "variant": "uint16_gpu",
+      "kind": "uint16",
+      "where": "gpu",
+      "rep": 2,
+      "position": 6,
+      "name": "100_uint16_gpu_r2"
+    },
+    {
+      "config": "M",
+      "size": 100,
+      "variant": "uint16_host",
+      "kind": "uint16",
+      "where": "host",
+      "rep": 2,
+      "position": 7,
+      "name": "100_uint16_host_r2"
+    },
+    {
+      "config": "M",
+      "size": 100,
+      "variant": "float16_gpu",
+      "kind": "float16",
+      "where": "gpu",
+      "rep": 2,
+      "position": 8,
+      "name": "100_float16_gpu_r2"
+    },
+    {
+      "config": "M",
+      "size": 100,
+      "variant": "float16_host",
+      "kind": "float16",
+      "where": "host",
+      "rep": 2,
+      "position": 9,
+      "name": "100_float16_host_r2"
+    },
+    {
+      "config": "M",
+      "size": 100,
+      "variant": "none",
+      "kind": "",
+      "where": "",
+      "rep": 2,
+      "position": 10,
+      "name": "100_none_r2"
+    },
+    {
+      "config": "M",
+      "size": 100,
+      "variant": "uint8_gpu",
+      "kind": "uint8",
+      "where": "gpu",
+      "rep": 3,
+      "position": 1,
+      "name": "100_uint8_gpu_r3"
+    },
+    {
+      "config": "M",
+      "size": 100,
+      "variant": "uint8_host",
+      "kind": "uint8",
+      "where": "host",
+      "rep": 3,
+      "position": 2,
+      "name": "100_uint8_host_r3"
+    },
+    {
+      "config": "M",
+      "size": 100,
+      "variant": "uint12_gpu",
+      "kind": "uint12",
+      "where": "gpu",
+      "rep": 3,
+      "position": 3,
+      "name": "100_uint12_gpu_r3"
+    },
+    {
+      "config": "M",
+      "size": 100,
+      "variant": "uint12_host",
+      "kind": "uint12",
+      "where": "host",
+      "rep": 3,
+      "position": 4,
+      "name": "100_uint12_host_r3"
+    },
+    {
+      "config": "M",
+      "size": 100,
+      "variant": "uint16_gpu",
+      "kind": "uint16",
+      "where": "gpu",
+      "rep": 3,
+      "position": 5,
+      "name": "100_uint16_gpu_r3"
+    },
+    {
+      "config": "M",
+      "size": 100,
+      "variant": "uint16_host",
+      "kind": "uint16",
+      "where": "host",
+      "rep": 3,
+      "position": 6,
+      "name": "100_uint16_host_r3"
+    },
+    {
+      "config": "M",
+      "size": 100,
+      "variant": "float16_gpu",
+      "kind": "float16",
+      "where": "gpu",
+      "rep": 3,
+      "position": 7,
+      "name": "100_float16_gpu_r3"
+    },
+    {
+      "config": "M",
+      "size": 100,
+      "variant": "float16_host",
+      "kind": "float16",
+      "where": "host",
+      "rep": 3,
+      "position": 8,
+      "name": "100_float16_host_r3"
+    },
+    {
+      "config": "M",
+      "size": 100,
+      "variant": "none",
+      "kind": "",
+      "where": "",
+      "rep": 3,
+      "position": 9,
+      "name": "100_none_r3"
+    },
+    {
+      "config": "M",
+      "size": 100,
+      "variant": "raw",
+      "kind": "",
+      "where": "",
+      "rep": 3,
+      "position": 10,
+      "name": "100_raw_r3"
+    },
+    {
+      "config": "L",
+      "size": 200,
+      "variant": "none",
+      "kind": "",
+      "where": "",
+      "rep": 1,
+      "position": 1,
+      "name": "200_none_r1"
+    },
+    {
+      "config": "L",
+      "size": 200,
+      "variant": "raw",
+      "kind": "",
+      "where": "",
+      "rep": 1,
+      "position": 2,
+      "name": "200_raw_r1"
+    },
+    {
+      "config": "L",
+      "size": 200,
+      "variant": "uint8_gpu",
+      "kind": "uint8",
+      "where": "gpu",
+      "rep": 1,
+      "position": 3,
+      "name": "200_uint8_gpu_r1"
+    },
+    {
+      "config": "L",
+      "size": 200,
+      "variant": "uint8_host",
+      "kind": "uint8",
+      "where": "host",
+      "rep": 1,
+      "position": 4,
+      "name": "200_uint8_host_r1"
+    },
+    {
+      "config": "L",
+      "size": 200,
+      "variant": "uint12_gpu",
+      "kind": "uint12",
+      "where": "gpu",
+      "rep": 1,
+      "position": 5,
+      "name": "200_uint12_gpu_r1"
+    },
+    {
+      "config": "L",
+      "size": 200,
+      "variant": "uint12_host",
+      "kind": "uint12",
+      "where": "host",
+      "rep": 1,
+      "position": 6,
+      "name": "200_uint12_host_r1"
+    },
+    {
+      "config": "L",
+      "size": 200,
+      "variant": "uint16_gpu",
+      "kind": "uint16",
+      "where": "gpu",
+      "rep": 1,
+      "position": 7,
+      "name": "200_uint16_gpu_r1"
+    },
+    {
+      "config": "L",
+      "size": 200,
+      "variant": "uint16_host",
+      "kind": "uint16",
+      "where": "host",
+      "rep": 1,
+      "position": 8,
+      "name": "200_uint16_host_r1"
+    },
+    {
+      "config": "L",
+      "size": 200,
+      "variant": "float16_gpu",
+      "kind": "float16",
+      "where": "gpu",
+      "rep": 1,
+      "position": 9,
+      "name": "200_float16_gpu_r1"
+    },
+    {
+      "config": "L",
+      "size": 200,
+      "variant": "float16_host",
+      "kind": "float16",
+      "where": "host",
+      "rep": 1,
+      "position": 10,
+      "name": "200_float16_host_r1"
+    },
+    {
+      "config": "L",
+      "size": 200,
+      "variant": "raw",
+      "kind": "",
+      "where": "",
+      "rep": 2,
+      "position": 1,
+      "name": "200_raw_r2"
+    },
+    {
+      "config": "L",
+      "size": 200,
+      "variant": "uint8_gpu",
+      "kind": "uint8",
+      "where": "gpu",
+      "rep": 2,
+      "position": 2,
+      "name": "200_uint8_gpu_r2"
+    },
+    {
+      "config": "L",
+      "size": 200,
+      "variant": "uint8_host",
+      "kind": "uint8",
+      "where": "host",
+      "rep": 2,
+      "position": 3,
+      "name": "200_uint8_host_r2"
+    },
+    {
+      "config": "L",
+      "size": 200,
+      "variant": "uint12_gpu",
+      "kind": "uint12",
+      "where": "gpu",
+      "rep": 2,
+      "position": 4,
+      "name": "200_uint12_gpu_r2"
+    },
+    {
+      "config": "L",
+      "size": 200,
+      "variant": "uint12_host",
+      "kind": "uint12",
+      "where": "host",
+      "rep": 2,
+      "position": 5,
+      "name": "200_uint12_host_r2"
+    },
+    {
+      "config": "L",
+      "size": 200,
+      "variant": "uint16_gpu",
+      "kind": "uint16",
+      "where": "gpu",
+      "rep": 2,
+      "position": 6,
+      "name": "200_uint16_gpu_r2"
+    },
+    {
+      "config": "L",
+      "size": 200,
+      "variant": "uint16_host",
+      "kind": "uint16",
+      "where": "host",
+      "rep": 2,
+      "position": 7,
+      "name": "200_uint16_host_r2"
+    },
+    {
+      "config": "L",
+      "size": 200,
+      "variant": "float16_gpu",
+      "kind": "float16",
+      "where": "gpu",
+      "rep": 2,
+      "position": 8,
+      "name": "200_float16_gpu_r2"
+    },
+    {
+      "config": "L",
+      "size": 200,
+      "variant": "float16_host",
+      "kind": "float16",
+      "where": "host",
+      "rep": 2,
+      "position": 9,
+      "name": "200_float16_host_r2"
+    },
+    {
+      "config": "L",
+      "size": 200,
+      "variant": "none",
+      "kind": "",
+      "where": "",
+      "rep": 2,
+      "position": 10,
+      "name": "200_none_r2"
+    },
+    {
+      "config": "L",
+      "size": 200,
+      "variant": "uint8_gpu",
+      "kind": "uint8",
+      "where": "gpu",
+      "rep": 3,
+      "position": 1,
+      "name": "200_uint8_gpu_r3"
+    },
+    {
+      "config": "L",
+      "size": 200,
+      "variant": "uint8_host",
+      "kind": "uint8",
+      "where": "host",
+      "rep": 3,
+      "position": 2,
+      "name": "200_uint8_host_r3"
+    },
+    {
+      "config": "L",
+      "size": 200,
+      "variant": "uint12_gpu",
+      "kind": "uint12",
+      "where": "gpu",
+      "rep": 3,
+      "position": 3,
+      "name": "200_uint12_gpu_r3"
+    },
+    {
+      "config": "L",
+      "size": 200,
+      "variant": "uint12_host",
+      "kind": "uint12",
+      "where": "host",
+      "rep": 3,
+      "position": 4,
+      "name": "200_uint12_host_r3"
+    },
+    {
+      "config": "L",
+      "size": 200,
+      "variant": "uint16_gpu",
+      "kind": "uint16",
+      "where": "gpu",
+      "rep": 3,
+      "position": 5,
+      "name": "200_uint16_gpu_r3"
+    },
+    {
+      "config": "L",
+      "size": 200,
+      "variant": "uint16_host",
+      "kind": "uint16",
+      "where": "host",
+      "rep": 3,
+      "position": 6,
+      "name": "200_uint16_host_r3"
+    },
+    {
+      "config": "L",
+      "size": 200,
+      "variant": "float16_gpu",
+      "kind": "float16",
+      "where": "gpu",
+      "rep": 3,
+      "position": 7,
+      "name": "200_float16_gpu_r3"
+    },
+    {
+      "config": "L",
+      "size": 200,
+      "variant": "float16_host",
+      "kind": "float16",
+      "where": "host",
+      "rep": 3,
+      "position": 8,
+      "name": "200_float16_host_r3"
+    },
+    {
+      "config": "L",
+      "size": 200,
+      "variant": "none",
+      "kind": "",
+      "where": "",
+      "rep": 3,
+      "position": 9,
+      "name": "200_none_r3"
+    },
+    {
+      "config": "L",
+      "size": 200,
+      "variant": "raw",
+      "kind": "",
+      "where": "",
+      "rep": 3,
+      "position": 10,
+      "name": "200_raw_r3"
+    }
+  ],
+  "predicted": {
+    "50": {
+      "nodes": 1030301,
+      "outputs": 15,
+      "bytes": {
+        "none": 0,
+        "raw": 74181672,
+        "uint8_gpu": 15455595,
+        "uint8_host": 15455595,
+        "uint12_gpu": 23182860,
+        "uint12_host": 23182860,
+        "uint16_gpu": 30910110,
+        "uint16_host": 30910110,
+        "float16_gpu": 30910110,
+        "float16_host": 30910110
+      }
+    },
+    "100": {
+      "nodes": 8120601,
+      "outputs": 15,
+      "bytes": {
+        "none": 0,
+        "raw": 584683272,
+        "uint8_gpu": 121810095,
+        "uint8_host": 121810095,
+        "uint12_gpu": 182714610,
+        "uint12_host": 182714610,
+        "uint16_gpu": 243619110,
+        "uint16_host": 243619110,
+        "float16_gpu": 243619110,
+        "float16_host": 243619110
+      }
+    },
+    "200": {
+      "nodes": 64481201,
+      "outputs": 15,
+      "bytes": {
+        "none": 0,
+        "raw": 4642646472,
+        "uint8_gpu": 967219095,
+        "uint8_host": 967219095,
+        "uint12_gpu": 1450828110,
+        "uint12_host": 1450828110,
+        "uint16_gpu": 1934437110,
+        "uint16_host": 1934437110,
+        "float16_gpu": 1934437110,
+        "float16_host": 1934437110
+      }
+    }
+  },
+  "args": {
+    "outdir": "/autofs/unitytravail/travail/raosseiran/tp3-compression/bench_quant_SML",
+    "configs": "['S', 'M', 'L']",
+    "sizes": "[50, 100, 200]",
+    "reps": "3",
+    "kinds": "['uint8', 'uint12', 'uint16', 'float16']",
+    "where": "['gpu', 'host']",
+    "no_none": "False",
+    "no_raw": "False",
+    "bounds": "snapshot",
+    "amax": "None",
+    "order": "2",
+    "timemax": "1.5",
+    "dt": "0.001",
+    "interval": "100",
+    "receivers": "/autofs/unitytravail/travail/raosseiran/tp3-compression/src/receiver_positions.txt",
+    "keep_files": "False",
+    "max_gb": "20.0",
+    "no_warmup": "False",
+    "semproxy": "/autofs/unitytravail/travail/raosseiran/tp3-compression/build/bin/semproxy",
+    "dry_run": "False",
+    "summary_only": "False",
+    "extra": "[]",
+    "variants": "['none', 'raw', 'uint8_gpu', 'uint8_host', 'uint12_gpu', 'uint12_host', 'uint16_gpu', 'uint16_host', 'float16_gpu', 'float16_host']",
+    "labels": "{50: 'S', 100: 'M', 200: 'L'}"
+  }
+}

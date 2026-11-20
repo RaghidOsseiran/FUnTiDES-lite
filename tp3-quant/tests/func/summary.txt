@@ -1,0 +1,66 @@
+== uint8_snapshot_gpu
+uint8 / snapshot / computed on gpu: identical to the reference encoder
+uint8 / snapshot: 15 snapshots, ratio 4.000 (61818060 -> 15455595 bytes); per snapshot: worst RMSE/max|p| 2.428e-03, worst maxerr/max|p| 3.565e-03; whole run (normalised by the run's max|p| = 2.3640e+00): RMSE 1.156e-04, maxerr 2.089e-03
+== uint8_snapshot_host
+uint8 / snapshot / computed on host: identical to the reference encoder
+uint8 / snapshot: 15 snapshots, ratio 4.000 (61818060 -> 15455595 bytes); per snapshot: worst RMSE/max|p| 2.428e-03, worst maxerr/max|p| 3.565e-03; whole run (normalised by the run's max|p| = 2.3640e+00): RMSE 1.156e-04, maxerr 2.089e-03
+== uint12_snapshot_gpu
+uint12 / snapshot / computed on gpu: identical to the reference encoder
+uint12 / snapshot: 15 snapshots, ratio 2.667 (61818060 -> 23182860 bytes); per snapshot: worst RMSE/max|p| 1.815e-04, worst maxerr/max|p| 2.220e-04; whole run (normalised by the run's max|p| = 2.3640e+00): RMSE 1.575e-05, maxerr 1.302e-04
+== uint12_snapshot_host
+uint12 / snapshot / computed on host: identical to the reference encoder
+uint12 / snapshot: 15 snapshots, ratio 2.667 (61818060 -> 23182860 bytes); per snapshot: worst RMSE/max|p| 1.802e-04, worst maxerr/max|p| 2.220e-04; whole run (normalised by the run's max|p| = 2.3640e+00): RMSE 1.575e-05, maxerr 1.303e-04
+== uint16_snapshot_gpu
+uint16 / snapshot / computed on gpu: identical to the reference encoder
+uint16 / snapshot: 15 snapshots, ratio 2.000 (61818060 -> 30910110 bytes); per snapshot: worst RMSE/max|p| 1.067e-05, worst maxerr/max|p| 1.389e-05; whole run (normalised by the run's max|p| = 2.3640e+00): RMSE 3.404e-07, maxerr 8.141e-06
+== uint16_snapshot_host
+uint16 / snapshot / computed on host: identical to the reference encoder
+uint16 / snapshot: 15 snapshots, ratio 2.000 (61818060 -> 30910110 bytes); per snapshot: worst RMSE/max|p| 1.033e-05, worst maxerr/max|p| 1.389e-05; whole run (normalised by the run's max|p| = 2.3640e+00): RMSE 3.439e-07, maxerr 8.140e-06
+== float16_snapshot_gpu
+float16 / snapshot / computed on gpu: identical to the reference encoder
+float16 / snapshot: 15 snapshots, ratio 2.000 (61818060 -> 30910110 bytes); per snapshot: worst RMSE/max|p| 7.240e-05, worst maxerr/max|p| 9.169e-04; whole run (normalised by the run's max|p| = 2.3640e+00): RMSE 1.211e-06, maxerr 3.745e-04
+== float16_snapshot_host
+float16 / snapshot / computed on host: identical to the reference encoder
+float16 / snapshot: 15 snapshots, ratio 2.000 (61818060 -> 30910110 bytes); per snapshot: worst RMSE/max|p| 7.241e-05, worst maxerr/max|p| 9.169e-04; whole run (normalised by the run's max|p| = 2.3640e+00): RMSE 1.211e-06, maxerr 3.747e-04
+== float32_snapshot_gpu
+float32 / snapshot / computed on gpu: identical to the reference encoder
+float32 / snapshot: 15 snapshots, ratio 1.000 (61818060 -> 61819140 bytes); per snapshot: worst RMSE/max|p| 0.000e+00, worst maxerr/max|p| 0.000e+00; whole run (normalised by the run's max|p| = 2.3640e+00): RMSE 0.000e+00, maxerr 0.000e+00
+== float32_snapshot_host
+float32 / snapshot / computed on host: identical to the reference encoder
+float32 / snapshot: 15 snapshots, ratio 1.000 (61818060 -> 61819140 bytes); per snapshot: worst RMSE/max|p| 0.000e+00, worst maxerr/max|p| 0.000e+00; whole run (normalised by the run's max|p| = 2.3640e+00): RMSE 0.000e+00, maxerr 0.000e+00
+== uint8_symmetric_gpu
+uint8 / symmetric / computed on gpu: identical to the reference encoder
+uint8 / symmetric: 15 snapshots, ratio 4.000 (61818060 -> 15455595 bytes); per snapshot: worst RMSE/max|p| 2.245e-03, worst maxerr/max|p| 3.937e-03; whole run (normalised by the run's max|p| = 2.3640e+00): RMSE 8.741e-05, maxerr 3.936e-03
+== uint8_symmetric_host
+uint8 / symmetric / computed on host: identical to the reference encoder
+uint8 / symmetric: 15 snapshots, ratio 4.000 (61818060 -> 15455595 bytes); per snapshot: worst RMSE/max|p| 2.245e-03, worst maxerr/max|p| 3.937e-03; whole run (normalised by the run's max|p| = 2.3640e+00): RMSE 8.741e-05, maxerr 3.936e-03
+== uint16_symmetric_gpu
+uint16 / symmetric / computed on gpu: identical to the reference encoder
+uint16 / symmetric: 15 snapshots, ratio 2.000 (61818060 -> 30910110 bytes); per snapshot: worst RMSE/max|p| 8.821e-06, worst maxerr/max|p| 1.530e-05; whole run (normalised by the run's max|p| = 2.3640e+00): RMSE 4.285e-07, maxerr 1.526e-05
+== uint16_symmetric_host
+uint16 / symmetric / computed on host: identical to the reference encoder
+uint16 / symmetric: 15 snapshots, ratio 2.000 (61818060 -> 30910110 bytes); per snapshot: worst RMSE/max|p| 8.820e-06, worst maxerr/max|p| 1.530e-05; whole run (normalised by the run's max|p| = 2.3640e+00): RMSE 4.285e-07, maxerr 1.526e-05
+== float16_symmetric_gpu
+float16 / symmetric / computed on gpu: identical to the reference encoder
+float16 / symmetric: 15 snapshots, ratio 2.000 (61818060 -> 30910110 bytes); per snapshot: worst RMSE/max|p| 7.240e-05, worst maxerr/max|p| 4.667e-04; whole run (normalised by the run's max|p| = 2.3640e+00): RMSE 1.211e-06, maxerr 3.738e-04
+== float16_symmetric_host
+float16 / symmetric / computed on host: identical to the reference encoder
+float16 / symmetric: 15 snapshots, ratio 2.000 (61818060 -> 30910110 bytes); per snapshot: worst RMSE/max|p| 7.240e-05, worst maxerr/max|p| 4.665e-04; whole run (normalised by the run's max|p| = 2.3640e+00): RMSE 1.211e-06, maxerr 3.748e-04
+== uint8_fixed_gpu
+uint8 / fixed / computed on gpu: identical to the reference encoder
+uint8 / fixed: 15 snapshots, ratio 4.000 (61818060 -> 15455595 bytes); per snapshot: worst RMSE/max|p| 9.570e-02, worst maxerr/max|p| 1.000e+00; whole run (normalised by the run's max|p| = 2.3640e+00): RMSE 1.569e-03, maxerr 4.163e-03
+== uint8_fixed_host
+uint8 / fixed / computed on host: identical to the reference encoder
+uint8 / fixed: 15 snapshots, ratio 4.000 (61818060 -> 15455595 bytes); per snapshot: worst RMSE/max|p| 9.570e-02, worst maxerr/max|p| 1.000e+00; whole run (normalised by the run's max|p| = 2.3640e+00): RMSE 1.569e-03, maxerr 4.163e-03
+== uint16_fixed_gpu
+uint16 / fixed / computed on gpu: identical to the reference encoder
+uint16 / fixed: 15 snapshots, ratio 2.000 (61818060 -> 30910110 bytes); per snapshot: worst RMSE/max|p| 3.022e-03, worst maxerr/max|p| 1.000e+00; whole run (normalised by the run's max|p| = 2.3640e+00): RMSE 6.557e-06, maxerr 1.614e-05
+== uint16_fixed_host
+uint16 / fixed / computed on host: identical to the reference encoder
+uint16 / fixed: 15 snapshots, ratio 2.000 (61818060 -> 30910110 bytes); per snapshot: worst RMSE/max|p| 3.022e-03, worst maxerr/max|p| 1.000e+00; whole run (normalised by the run's max|p| = 2.3640e+00): RMSE 6.557e-06, maxerr 1.614e-05
+== uint12_symmetric_gpu
+uint12 / symmetric / computed on gpu: identical to the reference encoder
+uint12 / symmetric: 15 snapshots, ratio 2.667 (61818060 -> 23182860 bytes); per snapshot: worst RMSE/max|p| 1.403e-04, worst maxerr/max|p| 2.443e-04; whole run (normalised by the run's max|p| = 2.3640e+00): RMSE 6.383e-06, maxerr 2.441e-04
+== uint12_symmetric_host
+uint12 / symmetric / computed on host: identical to the reference encoder
+uint12 / symmetric: 15 snapshots, ratio 2.667 (61818060 -> 23182860 bytes); per snapshot: worst RMSE/max|p| 1.403e-04, worst maxerr/max|p| 2.443e-04; whole run (normalised by the run's max|p| = 2.3640e+00): RMSE 6.383e-06, maxerr 2.441e-04

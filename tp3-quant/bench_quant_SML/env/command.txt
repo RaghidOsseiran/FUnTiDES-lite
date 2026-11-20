@@ -1,0 +1,1 @@
+bench_quant.py --outdir /net/cremi/raosseiran/espaces/travail/tp3-compression/bench_quant_SML --receivers receiver_positions.txt
