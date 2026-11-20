@@ -50,6 +50,9 @@ of the proxy are understood (FMT, auto-detected by default):
   csv          snap-<step>.csv  "x;y;z;p" per node
   csv-header   snap-<step>.csv  one p per line       + headers.csv ("x;y;z;")
   fake         snapshots/pnGlobal_step*.csv + metadata.json (generate_fake_data.py)
+  quant        quant/qsnap-<step>.bin + quant-header.json (--snapshots-quant):
+               quantized snapshots, reconstructed with quant_tools.py. Tried
+               last by the auto-detection: ask for it with --format quant
 
 Seismograms are looked for in DIR, DIR/seismos, DIR/seismograms_recording and
 DIR/seismograms_data (or --seismos), as written by the proxy in
@@ -141,13 +144,14 @@ def step_of(path):
 def find_snapshots(root, fmt):
     """Pick the snapshot format present in root/snapshots or root (or check
     the requested one). Returns (format, files, folder holding the files)."""
-    for folder in (root / "snapshots", root):
+    for folder in (root / "snapshots", root, root / "quant"):
         candidates = {
             "fake": ("pnGlobal_step*.csv", root / "metadata.json"),
             "bin-header": ("snap-*.dat", folder / "headers.dat"),
             "bin": ("snap-*.dat", None),
             "csv-header": ("snap-*.csv", folder / "headers.csv"),
             "csv": ("snap-*.csv", None),
+            "quant": ("qsnap-*.bin", folder / "quant-header.json"),
         }
         for name in [fmt] if fmt != "auto" else list(candidates):
             pattern, needed = candidates[name]
@@ -202,6 +206,15 @@ class Snapshots:
         self.meta = {}
         self._cache = OrderedDict()
 
+        if self.format == "quant":
+            # the header gives the axes; values are already x fastest, then y, z
+            self.meta = json.loads((folder / "quant-header.json").read_text())
+            self.dtype = self.meta["kind"]
+            self.x, self.y, self.z = (np.asarray(self.meta[k], dtype=float) for k in "xyz")
+            self.n_nodes = len(self.x) * len(self.y) * len(self.z)
+            self.perm = None
+            self.bounds = np.array([[a[0], a[-1]] for a in (self.x, self.y, self.z)])
+            return
         if self.format == "fake":
             # node,x,y,z,pressure
             self.meta = json.loads((root / "metadata.json").read_text())
@@ -280,6 +293,9 @@ class Snapshots:
         return p
 
     def _read_values(self, path):
+        if self.format == "quant":
+            from quant_tools import read_qsnap  # next to this script, numpy only
+            return read_qsnap(path)[1]
         if self.format == "fake":
             return np.loadtxt(path, delimiter=",", skiprows=1, usecols=4)
         if self.format == "bin-header":
@@ -1170,7 +1186,7 @@ def main():
                          "(default: %(default)s)")
     ap.add_argument("--list", action="store_true", help="list the runs found in DATA and exit")
     ap.add_argument("--format", default="auto",
-                    choices=["auto", "bin", "bin-header", "csv", "csv-header", "fake"],
+                    choices=["auto", "bin", "bin-header", "csv", "csv-header", "fake", "quant"],
                     help="snapshot format (default: auto-detect, binary first)")
     ap.add_argument("--dtype", default="auto", choices=["auto", "<f4", "<f8"],
                     help="float type of binary files (float64 if built with USE_DOUBLE)")

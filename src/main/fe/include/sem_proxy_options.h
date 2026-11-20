@@ -47,6 +47,30 @@ class SemProxyOptions
   bool syncWrites = false;
   std::string metricsFile = "metrics.json";
 
+  // quantized snapshots (lossy compression), written at every snapshot output
+  // step in their own folder; independent of --use-snapshots, so one run can
+  // write the raw and the quantized version of exactly the same field
+  std::string snapshotsQuant = "none";  // none|float32|float16|uint<N>, N in 2..16
+  std::string quantWhere = "gpu";       // gpu|host: where min/max and mapping run
+  std::string quantBounds = "snapshot"; // snapshot|symmetric|fixed
+  float quantAmax = 0.f;                // bound A of [-A, A] for --quant-bounds fixed
+  std::string quantFolder = "quant";
+
+  bool useQuant() const { return snapshotsQuant != "none"; }
+
+  // Number of bits of a "uint<N>" kind, 0 if kind is not of that form.
+  static int quantUintBits(const std::string& kind)
+  {
+    if (kind.rfind("uint", 0) != 0 || kind.size() < 5 || kind.size() > 6) return 0;
+    int bits = 0;
+    for (std::size_t i = 4; i < kind.size(); ++i)
+    {
+      if (kind[i] < '0' || kind[i] > '9') return 0;
+      bits = bits * 10 + (kind[i] - '0');
+    }
+    return bits;
+  }
+
 
   void validate() const
   {
@@ -69,6 +93,29 @@ class SemProxyOptions
       throw std::runtime_error("--use-slices requires --mesh cartesian");
     if (useSlices && snapshotsInterval <= 0)
       throw std::runtime_error("snapshots-interval must be > 0");
+
+    if (useQuant())
+    {
+      const int bits = quantUintBits(snapshotsQuant);
+      if (snapshotsQuant != "float32" && snapshotsQuant != "float16" &&
+          (bits < 2 || bits > 16))
+        throw std::runtime_error(
+            "--snapshots-quant must be none, float32, float16 or uint<N> with "
+            "N in 2..16 (e.g. uint8, uint12, uint16)");
+      if (quantWhere != "gpu" && quantWhere != "host")
+        throw std::runtime_error("--quant-where must be gpu or host");
+      if (quantBounds != "snapshot" && quantBounds != "symmetric" &&
+          quantBounds != "fixed")
+        throw std::runtime_error(
+            "--quant-bounds must be snapshot, symmetric or fixed");
+      if (quantBounds == "fixed" && !(quantAmax > 0))
+        throw std::runtime_error("--quant-bounds fixed requires --quant-amax > 0");
+      // the header describes the grid by its x, y, z axes (i + j*nx + k*nx*ny)
+      if (mesh != "cartesian")
+        throw std::runtime_error("--snapshots-quant requires --mesh cartesian");
+      if (snapshotsInterval <= 0)
+        throw std::runtime_error("snapshots-interval must be > 0");
+    }
   }
 
   // Bind CLI flags to this instance (no --help here)
@@ -120,6 +167,11 @@ class SemProxyOptions
         ("slices-folder", "Folder where the slices are stored (created if missing)", cxxopts::value<std::string>(o.slicesFolder))
         ("slice-z", "z of the slice in m, snapped to the nearest node layer (default: source z)", cxxopts::value<float>(o.sliceZ))
         ("sync-writes", "fsync each snapshot/slice file after writing it (timed)", cxxopts::value<bool>(o.syncWrites))
-        ("metrics-file", "JSON file where run timers and byte counts are written", cxxopts::value<std::string>(o.metricsFile));
+        ("metrics-file", "JSON file where run timers and byte counts are written", cxxopts::value<std::string>(o.metricsFile))
+        ("snapshots-quant", "Write quantized snapshots at every snapshot output step: none|float32|float16|uint<N> (N in 2..16, e.g. uint8, uint12, uint16)", cxxopts::value<std::string>(o.snapshotsQuant))
+        ("quant-where", "Where the quantization runs: gpu (host reads only the reduced data) | host (host reads the full field)", cxxopts::value<std::string>(o.quantWhere))
+        ("quant-bounds", "Bounds of the uint mapping: snapshot (min/max of each snapshot) | symmetric (+-max|p| of each snapshot) | fixed (+-quant-amax, clamped)", cxxopts::value<std::string>(o.quantBounds))
+        ("quant-amax", "Amplitude A of the fixed bounds [-A, A] (--quant-bounds fixed)", cxxopts::value<float>(o.quantAmax))
+        ("quant-folder", "Folder where the quantized snapshots are stored (created if missing)", cxxopts::value<std::string>(o.quantFolder));
   }
 };

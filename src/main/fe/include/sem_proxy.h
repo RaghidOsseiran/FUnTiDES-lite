@@ -85,6 +85,13 @@ class SEMproxy
   void extractSlice();
   void writeSlice(int timestep);
 
+  // quantized snapshot output (--snapshots-quant), three separately timed
+  // steps: min/max of column i1, mapping into the reduced buffer, file write.
+  // The first two run on the device or on the host (--quant-where).
+  void quantBounds();
+  void quantEncode();
+  void writeQuant(int timestep);
+
   void saveSeismograms(void);
   int getSeismosLoC(void);
 
@@ -118,6 +125,24 @@ class SEMproxy
   float slice_z_req_ = 0;     // z asked with --slice-z
   std::vector<float> slice_buf_;  // nx*ny values, allocated once
 
+  // quantized snapshots
+  bool is_quant_ = false;
+  std::string quant_folder_;
+  bool quant_is_float_ = false;   // float32/float16 (else linear uint)
+  int quant_bits_ = 0;            // bits per value
+  bool quant_on_gpu_ = true;      // --quant-where
+  std::uint32_t quant_levels_ = 0;  // uint kinds: number of levels
+  std::size_t quant_payload_bytes_ = 0;  // bytes written per snapshot
+  std::size_t quant_units_ = 0;   // loop count: values (float), groups of 8 (uint)
+  // state of the current snapshot, set by quantBounds()
+  float quant_dmin_ = 0, quant_dmax_ = 0;  // min/max of the field
+  float quant_vmin_ = 0, quant_vmax_ = 0;  // bounds of the uint mapping
+  float quant_scale_ = 1;                  // float16: stored value = p / scale
+  std::vector<unsigned char> quant_host_;  // reduced data, host mode
+#ifdef USE_KOKKOS
+  Kokkos::View<unsigned char*, Layout, MemSpace> quant_dev_;  // gpu mode
+#endif
+
   bool sync_writes_ = false;
   SemProxyOptions opt_;  // kept for the metrics file
 
@@ -138,12 +163,19 @@ class SEMproxy
     std::uintmax_t slice_bytes = 0;
     std::uintmax_t header_bytes = 0;
     std::uintmax_t seismo_bytes = 0;
+    double quant_bounds_s = 0;
+    double quant_encode_s = 0;
+    double quant_write_s = 0;
+    int quant_count = 0;
+    std::uintmax_t quant_bytes = 0;
   } metrics_;
 
   std::string snapshotPath(int timestep) const;
   std::string snapshotHeaderPath() const;
   std::string slicePath(int timestep) const;
   void initSlices();
+  std::string quantPath(int timestep) const;
+  void initQuant();
   static void syncFile(const std::string& path);
 
   // sismos

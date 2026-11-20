@@ -89,6 +89,161 @@ double secondsBetween(std::chrono::steady_clock::time_point t0,
 {
   return std::chrono::duration<double>(t1 - t0).count();
 }
+
+// ---- quantized snapshots (--snapshots-quant) --------------------------------
+// qsnap-<step>.bin, little-endian: a fixed header then `payload_bytes` bytes.
+//   off  type     field
+//     0  char[4]  magic "QSNP"
+//     4  uint32   version (1)
+//     8  uint32   header_bytes (72): offset of the payload
+//    12  uint32   kind: 0 = float (IEEE, `bits` = 32 or 16), 1 = linear uint
+//    16  uint32   bits per value
+//    20  uint32   encoding of the payload: 0 = raw. Reserved for the lossless
+//                 stages applied after quantization (delta, RLE)
+//    24  uint32   step
+//    28  uint32   levels (uint kind): q is in [0, levels - 1]
+//    32  uint64   n_values (nodes)
+//    40  uint64   payload_bytes
+//    48  float32  vmin   bounds of the uint mapping:
+//    52  float32  vmax     p' = vmin + (vmax - vmin) * q / (levels - 1)
+//    56  float32  data_min   min/max of the original field
+//    60  float32  data_max
+//    64  float32  scale (float kinds): p' = stored value * scale
+//    68  uint32   flags: bit 0 = fixed bounds (values outside are clamped)
+// Raw payload: float kinds, one little-endian value per node; uint kind, an
+// LSB-first bit stream, node i in bits [i*bits, (i+1)*bits) (so uint8 and
+// uint16 are plain little-endian arrays), zero-padded to a whole byte.
+constexpr std::uint32_t kQuantHeaderBytes = 72;
+constexpr std::uint32_t kQuantVersion = 1;
+constexpr std::uint32_t kQuantKindFloat = 0;
+constexpr std::uint32_t kQuantKindUint = 1;
+constexpr std::uint32_t kQuantFlagFixedBounds = 1;
+
+PROXY_HOST_DEVICE std::uint32_t floatBits(float f)
+{
+#ifdef USE_KOKKOS
+  return Kokkos::bit_cast<std::uint32_t>(f);
+#else
+  std::uint32_t x;
+  std::memcpy(&x, &f, sizeof(x));
+  return x;
+#endif
+}
+
+// float32 -> IEEE half precision bits, round to nearest even; overflow gives
+// +-inf, small values become subnormals then +-0.
+PROXY_HOST_DEVICE std::uint16_t floatToHalf(float f)
+{
+  const std::uint32_t x = floatBits(f);
+  const std::uint32_t sign = (x >> 16) & 0x8000u;
+  std::uint32_t mant = x & 0x007fffffu;
+  const int exp = int((x >> 23) & 0xffu);
+  if (exp == 255)  // inf, nan
+    return std::uint16_t(sign | 0x7c00u | (mant ? 0x0200u : 0u));
+  const int e = exp - 127 + 15;  // half exponent field
+  if (e >= 31) return std::uint16_t(sign | 0x7c00u);
+  if (e <= 0)
+  {
+    // subnormal half (also float zeros and subnormals: they give 0)
+    if (e < -10 || exp == 0) return std::uint16_t(sign);
+    mant |= 0x00800000u;
+    const int shift = 14 - e;  // 14..24
+    std::uint32_t h = mant >> shift;
+    const std::uint32_t rem = mant & ((1u << shift) - 1u);
+    const std::uint32_t halfway = 1u << (shift - 1);
+    if (rem > halfway || (rem == halfway && (h & 1u))) h++;
+    return std::uint16_t(sign | h);
+  }
+  std::uint32_t h = (std::uint32_t(e) << 10) | (mant >> 13);
+  const std::uint32_t rem = mant & 0x1fffu;
+  // the carry may go into the exponent (up to inf): still the right value
+  if (rem > 0x1000u || (rem == 0x1000u && (h & 1u))) h++;
+  return std::uint16_t(sign | h);
+}
+
+// Min/max of column `col` of the field (device reduction).
+#ifdef USE_KOKKOS
+template <class Field>
+struct QuantMinMaxFunctor
+{
+  Field pn;
+  int col;
+  KOKKOS_INLINE_FUNCTION void operator()(
+      const int i, Kokkos::MinMaxScalar<float>& mm) const
+  {
+    const float v = pn(i, col);
+    if (v < mm.min_val) mm.min_val = v;
+    if (v > mm.max_val) mm.max_val = v;
+  }
+};
+#endif
+
+// Writes the reduced form of column `col` into `out`. One call handles one
+// unit, and units write disjoint bytes (no race): a unit is one value for the
+// float kinds, and 8 consecutive values (exactly `bits` bytes) for the uint
+// kind. Used as a Kokkos functor on the device and called in a plain loop on
+// the host, so both give the same bytes.
+template <class Field>
+struct QuantEncodeFunctor
+{
+  Field pn;
+  int col;
+  unsigned char* out;
+  std::size_t n;    // number of values
+  bool is_float;
+  int bits;
+  double vmin;      // uint: q = round((p - vmin) * inv), clamped to [0, maxq]
+  double inv;
+  double maxq;
+  float inv_scale;  // float16: stored value = p * inv_scale
+
+  PROXY_HOST_DEVICE void operator()(const int u) const
+  {
+    if (is_float)
+    {
+      const float v = pn(u, col);
+      if (bits == 32)
+      {
+        const std::uint32_t x = floatBits(v);
+        unsigned char* o = out + std::size_t(u) * 4;
+        o[0] = (unsigned char)(x & 0xffu);
+        o[1] = (unsigned char)((x >> 8) & 0xffu);
+        o[2] = (unsigned char)((x >> 16) & 0xffu);
+        o[3] = (unsigned char)(x >> 24);
+      }
+      else
+      {
+        const std::uint16_t h = floatToHalf(v * inv_scale);
+        unsigned char* o = out + std::size_t(u) * 2;
+        o[0] = (unsigned char)(h & 0xffu);
+        o[1] = (unsigned char)(h >> 8);
+      }
+      return;
+    }
+    unsigned char* o = out + std::size_t(u) * bits;
+    std::uint32_t acc = 0;  // at most 7 + 16 pending bits
+    int pending = 0;
+    for (int v = 0; v < 8; ++v)
+    {
+      const std::size_t i = std::size_t(u) * 8 + v;
+      std::uint32_t q = 0;  // padding after the last value
+      if (i < n)
+      {
+        double t = (double(pn(i, col)) - vmin) * inv;
+        t = t < 0 ? 0 : (t > maxq ? maxq : t);
+        q = std::uint32_t(t + 0.5);
+      }
+      acc |= q << pending;
+      pending += bits;
+      while (pending >= 8)
+      {
+        *o++ = (unsigned char)(acc & 0xffu);
+        acc >>= 8;
+        pending -= 8;
+      }
+    }
+  }
+};
 }  // namespace
 
 SEMproxy::SEMproxy(const SemProxyOptions& opt)
@@ -133,6 +288,8 @@ SEMproxy::SEMproxy(const SemProxyOptions& opt)
   slice_folder_ = opt.slicesFolder;
   slice_z_req_ = opt.sliceZ;
   sync_writes_ = opt.syncWrites;
+  is_quant_ = opt.useQuant();
+  quant_folder_ = opt.quantFolder;
   opt_ = opt;
 
   const SolverFactory::methodType methodType = getMethod(opt.method);
@@ -224,6 +381,7 @@ SEMproxy::SEMproxy(const SemProxyOptions& opt)
   std::cout << "Simulated time is " << timemax_ << "s" << std::endl;
 
   if (is_slices_) initSlices();
+  if (is_quant_) initQuant();
 }
 
 void SEMproxy::run()
@@ -265,7 +423,7 @@ void SEMproxy::run()
                                        pnGlobal, "pnGlobal");
     }
 
-    const bool is_output_step = (is_snapshots_ || is_slices_) &&
+    const bool is_output_step = (is_snapshots_ || is_slices_ || is_quant_) &&
                                 indexTimeSample % snap_time_interval_ == 0;
 
     // Slice before snapshot: the snapshot reads every node on the host, so
@@ -286,6 +444,30 @@ void SEMproxy::run()
            << " seconds." << endl;
       metrics_.slice_bytes +=
           std::filesystem::file_size(slicePath(indexTimeSample));
+    }
+
+    // Quantized snapshot before the raw one, for the same reason: in gpu mode
+    // the field must not already be host-resident. (When both are written,
+    // host mode leaves the field on the host and the raw snapshot that
+    // follows looks cheaper: time each output in its own run.)
+    if (is_quant_ && is_output_step)
+    {
+      const sclock::time_point t0 = sclock::now();
+      quantBounds();
+      const sclock::time_point t1 = sclock::now();
+      quantEncode();
+      const sclock::time_point t2 = sclock::now();
+      writeQuant(indexTimeSample);
+      const sclock::time_point t3 = sclock::now();
+
+      metrics_.quant_bounds_s += secondsBetween(t0, t1);
+      metrics_.quant_encode_s += secondsBetween(t1, t2);
+      metrics_.quant_write_s += secondsBetween(t2, t3);
+      metrics_.quant_count++;
+      cout << "Elapsed Saving Quantized Snapshot Time : "
+           << secondsBetween(t0, t3) << " seconds." << endl;
+      metrics_.quant_bytes +=
+          std::filesystem::file_size(quantPath(indexTimeSample));
     }
 
     if (is_snapshots_ && is_output_step)
@@ -813,6 +995,236 @@ void SEMproxy::writeSlice(int timestep) {
   if (sync_writes_) syncFile(path);
 }
 
+std::string SEMproxy::quantPath(int timestep) const {
+  return (std::filesystem::path(quant_folder_) /
+          ("qsnap-" + std::to_string(timestep) + ".bin"))
+      .string();
+}
+
+// Decode the kind, size and allocate the reduced buffer, create the folder
+// and write quant-header.json. Called once from the constructor.
+void SEMproxy::initQuant() {
+  using value_t =
+      std::remove_cv_t<std::remove_reference_t<decltype(pnGlobal(0, 0))>>;
+  static_assert(std::is_same_v<value_t, float>,
+                "quantized output assumes a float pnGlobal");
+  const std::uint32_t one = 1;
+  if (*reinterpret_cast<const unsigned char*>(&one) != 1)
+    throw std::runtime_error("quantized output assumes a little-endian host");
+
+  const int nx = nb_nodes_[0];
+  const int ny = nb_nodes_[1];
+  const int nz = nb_nodes_[2];
+  const std::size_t plane = std::size_t(nx) * ny;
+  const std::size_t n = m_mesh->getNumberOfNodes();
+  if (n != plane * nz)
+    throw std::runtime_error("quantized snapshots: node count is not nx*ny*nz");
+
+  const std::string& kind = opt_.snapshotsQuant;
+  quant_is_float_ = (kind == "float32" || kind == "float16");
+  quant_on_gpu_ = (opt_.quantWhere == "gpu");
+  std::size_t capacity = 0;
+  if (quant_is_float_) {
+    quant_bits_ = (kind == "float32") ? 32 : 16;
+    quant_levels_ = 0;
+    quant_units_ = n;
+    quant_payload_bytes_ = n * (quant_bits_ / 8);
+    capacity = quant_payload_bytes_;
+  } else {
+    quant_bits_ = SemProxyOptions::quantUintBits(kind);
+    // 2^N levels between the min and the max of the snapshot. With symmetric
+    // bounds [-A, A], 2^N - 1 levels: an odd count puts a level exactly on 0,
+    // so the quiet zones are reconstructed as exact zeros.
+    quant_levels_ = (std::uint32_t(1) << quant_bits_) -
+                    (opt_.quantBounds == "snapshot" ? 0 : 1);
+    quant_units_ = (n + 7) / 8;  // groups of 8 values = quant_bits_ bytes
+    quant_payload_bytes_ = (n * quant_bits_ + 7) / 8;
+    capacity = quant_units_ * quant_bits_;
+  }
+
+  if (quant_on_gpu_) {
+#ifdef USE_KOKKOS
+    quant_dev_ = Kokkos::View<unsigned char*, Layout, MemSpace>("quantBuffer",
+                                                                capacity);
+#else
+    throw std::runtime_error("--quant-where gpu requires a Kokkos build");
+#endif
+  } else {
+    quant_host_.assign(capacity, 0);
+  }
+
+  cout << "Quantized snapshots: " << kind << " (" << quant_bits_
+       << " bits/value), bounds " << opt_.quantBounds << ", computed on "
+       << opt_.quantWhere << ", " << quant_payload_bytes_
+       << " payload bytes per snapshot" << endl;
+
+  std::filesystem::create_directories(quant_folder_);
+  if (!std::filesystem::is_directory(quant_folder_))
+    throw std::runtime_error("quant folder is not a directory: " +
+                             quant_folder_);
+
+  const std::filesystem::path header_path =
+      std::filesystem::path(quant_folder_) / "quant-header.json";
+  std::ofstream h(header_path);
+  if (!h) throw std::runtime_error("Cannot open " + header_path.string());
+  h << "{\n"
+    << "  \"format\": \"qsnap\",\n"
+    << "  \"version\": " << kQuantVersion << ",\n"
+    << "  \"file_header_bytes\": " << kQuantHeaderBytes << ",\n"
+    << "  \"kind\": " << jsonString(kind) << ",\n"
+    << "  \"bits\": " << quant_bits_ << ",\n"
+    << "  \"levels\": " << quant_levels_ << ",\n"
+    << "  \"bounds\": " << jsonString(opt_.quantBounds) << ",\n"
+    << "  \"amax\": "
+    << (opt_.quantBounds == "fixed" ? jsonFloat(opt_.quantAmax) : "null")
+    << ",\n"
+    << "  \"where\": " << jsonString(opt_.quantWhere) << ",\n"
+    << "  \"encoding\": \"raw\",\n"
+    << "  \"payload_bytes\": " << quant_payload_bytes_ << ",\n"
+    << "  \"nodes\": " << n << ",\n"
+    << "  \"nx\": " << nx << ",\n"
+    << "  \"ny\": " << ny << ",\n"
+    << "  \"nz\": " << nz << ",\n"
+    << "  \"order\": " << m_mesh->getOrder() << ",\n"
+    << "  \"ex\": " << nb_elements_[0] << ",\n"
+    << "  \"ey\": " << nb_elements_[1] << ",\n"
+    << "  \"ez\": " << nb_elements_[2] << ",\n"
+    << "  \"interval\": " << snap_time_interval_ << ",\n"
+    << "  \"dt\": " << jsonFloat(dt_) << ",\n"
+    << "  \"x\": [";
+  for (int i = 0; i < nx; ++i)
+    h << (i ? ", " : "") << jsonFloat(m_mesh->nodeCoord(i, 0));
+  h << "],\n  \"y\": [";
+  for (int j = 0; j < ny; ++j)
+    h << (j ? ", " : "") << jsonFloat(m_mesh->nodeCoord(j * nx, 1));
+  h << "],\n  \"z\": [";
+  for (int k = 0; k < nz; ++k)
+    h << (k ? ", " : "") << jsonFloat(m_mesh->nodeCoord(int(k * plane), 2));
+  h << "]\n}\n";
+  h.close();
+  if (!h) throw std::runtime_error("Cannot write " + header_path.string());
+  metrics_.header_bytes += std::filesystem::file_size(header_path);
+}
+
+// Min/max of the newest time column (i1), then the bounds (uint kinds) and
+// the scale (float16) used for this snapshot. On the device the host only
+// receives the two scalars; on the host the loop reads every node, which
+// brings the whole column to the host (unified memory).
+void SEMproxy::quantBounds() {
+  const int n = m_mesh->getNumberOfNodes();
+  float dmin = std::numeric_limits<float>::max();
+  float dmax = std::numeric_limits<float>::lowest();
+#ifdef USE_KOKKOS
+  if (quant_on_gpu_) {
+    Kokkos::MinMaxScalar<float> mm;
+    mm.min_val = dmin;
+    mm.max_val = dmax;
+    Kokkos::parallel_reduce("quantMinMax", Kokkos::RangePolicy<>(0, n),
+                            QuantMinMaxFunctor<arrayReal>{pnGlobal, i1},
+                            Kokkos::MinMax<float>(mm));
+    Kokkos::fence();
+    dmin = mm.min_val;
+    dmax = mm.max_val;
+  } else
+#endif
+  {
+    for (int i = 0; i < n; ++i) {
+      const float v = pnGlobal(i, i1);
+      if (v < dmin) dmin = v;
+      if (v > dmax) dmax = v;
+    }
+  }
+  quant_dmin_ = dmin;
+  quant_dmax_ = dmax;
+
+  const float amax = std::max(std::fabs(dmin), std::fabs(dmax));
+  const float a = (opt_.quantBounds == "fixed") ? opt_.quantAmax : amax;
+  if (opt_.quantBounds == "snapshot") {
+    quant_vmin_ = dmin;
+    quant_vmax_ = dmax;
+  } else {
+    quant_vmin_ = -a;
+    quant_vmax_ = a;
+  }
+
+  // float16 keeps ~3 significant digits but only for |v| in [6e-5, 65504]
+  // (subnormals down to 6e-8). With bounds "snapshot" the field is converted
+  // as it is; otherwise it is first divided by a power of two (exact) that
+  // brings the amplitude a into [2^14, 2^15), to use the whole exponent range.
+  quant_scale_ = 1.f;
+  if (quant_is_float_ && quant_bits_ == 16 && opt_.quantBounds != "snapshot" &&
+      a > 0 && std::isfinite(a))
+    quant_scale_ = std::ldexp(1.f, std::ilogb(a) - 14);
+}
+
+// Map column i1 into the reduced buffer (device view or host vector).
+void SEMproxy::quantEncode() {
+  QuantEncodeFunctor<arrayReal> f;
+  f.pn = pnGlobal;
+  f.col = i1;
+  f.out = nullptr;
+  f.n = m_mesh->getNumberOfNodes();
+  f.is_float = quant_is_float_;
+  f.bits = quant_bits_;
+  f.vmin = double(quant_vmin_);
+  f.maxq = quant_is_float_ ? 0.0 : double(quant_levels_ - 1);
+  const double range = double(quant_vmax_) - double(quant_vmin_);
+  f.inv = range > 0 ? f.maxq / range : 0.0;  // constant field: every q is 0
+  f.inv_scale = 1.f / quant_scale_;
+  const int units = int(quant_units_);
+
+#ifdef USE_KOKKOS
+  if (quant_on_gpu_) {
+    f.out = quant_dev_.data();
+    Kokkos::parallel_for("quantEncode", Kokkos::RangePolicy<>(0, units), f);
+    Kokkos::fence();  // the buffer is read by the host right after
+    return;
+  }
+#endif
+  f.out = quant_host_.data();
+  for (int u = 0; u < units; ++u) f(u);
+}
+
+// Write the header and the reduced buffer to qsnap-<timestep>.bin. In gpu
+// mode this is where the host reads the reduced data (page migration of the
+// buffer only), so that transfer is part of this timer.
+void SEMproxy::writeQuant(int timestep) {
+  unsigned char hdr[kQuantHeaderBytes] = {0};
+  auto put = [&hdr](std::size_t off, const auto& v) {
+    std::memcpy(hdr + off, &v, sizeof(v));
+  };
+  std::memcpy(hdr, "QSNP", 4);
+  put(4, kQuantVersion);
+  put(8, kQuantHeaderBytes);
+  put(12, quant_is_float_ ? kQuantKindFloat : kQuantKindUint);
+  put(16, std::uint32_t(quant_bits_));
+  put(20, std::uint32_t(0));  // encoding: raw
+  put(24, std::uint32_t(timestep));
+  put(28, quant_levels_);
+  put(32, std::uint64_t(m_mesh->getNumberOfNodes()));
+  put(40, std::uint64_t(quant_payload_bytes_));
+  put(48, quant_vmin_);
+  put(52, quant_vmax_);
+  put(56, quant_dmin_);
+  put(60, quant_dmax_);
+  put(64, quant_scale_);
+  put(68, std::uint32_t(opt_.quantBounds == "fixed" ? kQuantFlagFixedBounds
+                                                    : 0));
+
+  const unsigned char* payload = quant_host_.data();
+#ifdef USE_KOKKOS
+  if (quant_on_gpu_) payload = quant_dev_.data();
+#endif
+
+  const std::string path = quantPath(timestep);
+  std::ofstream file(path, std::ios::binary | std::ios::out);
+  file.write(reinterpret_cast<const char*>(hdr), sizeof(hdr));
+  file.write(reinterpret_cast<const char*>(payload), quant_payload_bytes_);
+  file.close();
+  if (!file) throw std::runtime_error("Cannot write quantized snapshot " + path);
+  if (sync_writes_) syncFile(path);
+}
+
 // Force the data of an already closed file to the disk (--sync-writes).
 void SEMproxy::syncFile(const std::string& path) {
   const int fd = ::open(path.c_str(), O_RDONLY);
@@ -866,6 +1278,11 @@ void SEMproxy::writeMetrics() {
       << "    \"slice_k\": " << (is_slices_ ? std::to_string(slice_k_) : "null") << ",\n"
       << "    \"slice_z\": " << (is_slices_ ? jsonFloat(slice_z_) : "null") << ",\n"
       << "    \"sync_writes\": " << jsonBool(sync_writes_) << ",\n"
+      << "    \"snapshots_quant\": " << jsonString(opt_.snapshotsQuant) << ",\n"
+      << "    \"quant_where\": " << jsonString(opt_.quantWhere) << ",\n"
+      << "    \"quant_bounds\": " << jsonString(opt_.quantBounds) << ",\n"
+      << "    \"quant_amax\": " << jsonFloat(opt_.quantAmax) << ",\n"
+      << "    \"quant_folder\": " << jsonString(quant_folder_) << ",\n"
       << "    \"seismograms_folder\": " << jsonString(seismograms_data_folder_) << ",\n"
       << "    \"metrics_file\": " << jsonString(path) << "\n"
       << "  },\n"
@@ -886,7 +1303,14 @@ void SEMproxy::writeMetrics() {
       << "  \"snapshot_bytes\": " << m.snapshot_bytes << ",\n"
       << "  \"slice_bytes\": " << m.slice_bytes << ",\n"
       << "  \"header_bytes\": " << m.header_bytes << ",\n"
-      << "  \"seismo_bytes\": " << m.seismo_bytes << "\n"
+      << "  \"seismo_bytes\": " << m.seismo_bytes << ",\n"
+      << "  \"quant_bounds_s\": " << jsonDouble(m.quant_bounds_s) << ",\n"
+      << "  \"quant_encode_s\": " << jsonDouble(m.quant_encode_s) << ",\n"
+      << "  \"quant_write_s\": " << jsonDouble(m.quant_write_s) << ",\n"
+      << "  \"quant_count\": " << m.quant_count << ",\n"
+      << "  \"quant_bytes\": " << m.quant_bytes << ",\n"
+      << "  \"quant_payload_bytes\": "
+      << (is_quant_ ? std::uintmax_t(quant_payload_bytes_) * m.quant_count : 0) << "\n"
       << "}\n";
   out.close();
   if (!out) throw std::runtime_error("Cannot write the metrics file " + path);
