@@ -37,8 +37,8 @@ namespace Piloting {
       opts = (PilotingOptions *)mmap(NULL, sizeof(PilotingOptions), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE | MAP_LOCKED, fd_, 0);
 
       opts->stop |= stop_;
-      if (opts->z_slice != z_slice_) opts->z_slice = z_slice_;
-      if (opts->frequency != frequency_) opts->frequency = frequency_;
+      if (opts->z_slice != z_slice_ && (z_slice_ != ~0UL)) opts->z_slice = z_slice_;
+      if (opts->frequency != frequency_ && frequency_ != 0) opts->frequency = frequency_;
       if (snap_now_) opts->snap_now++;
 
       munmap(opts, sizeof(PilotingOptions));
@@ -71,7 +71,7 @@ namespace Piloting {
     private:
     size_t fd_;
     bool is_file_owner_ = false, snap_now_ = false, stop_ = false;
-    size_t frequency_ = 1, z_slice_ = 0;
+    size_t frequency_ = 0, z_slice_ = ~0UL;
     std::string filename_;
   };
 
