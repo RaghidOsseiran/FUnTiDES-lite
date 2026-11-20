@@ -47,6 +47,9 @@ class SemProxyOptions
   bool syncWrites = false;
   std::string metricsFile = "metrics.json";
 
+  int inSituInterval = 1;
+  bool inSituStats = false;
+  bool inSituQuart = false;
 
   void validate() const
   {
@@ -120,6 +123,10 @@ class SemProxyOptions
         ("slices-folder", "Folder where the slices are stored (created if missing)", cxxopts::value<std::string>(o.slicesFolder))
         ("slice-z", "z of the slice in m, snapped to the nearest node layer (default: source z)", cxxopts::value<float>(o.sliceZ))
         ("sync-writes", "fsync each snapshot/slice file after writing it (timed)", cxxopts::value<bool>(o.syncWrites))
-        ("metrics-file", "JSON file where run timers and byte counts are written", cxxopts::value<std::string>(o.metricsFile));
+        ("metrics-file", "JSON file where run timers and byte counts are written", cxxopts::value<std::string>(o.metricsFile))
+        ("ins-interval", "In situ timestep interval (default 1)", cxxopts::value<int>(o.inSituInterval))
+        ("ins-compute-stats", "Compute the stats of all values in-situ", cxxopts::value<bool>(o.inSituStats))
+        ("ins-compute-quartiles", "Compute the values of quartiles (1st, 2nd, 3rd)", cxxopts::value<bool>(o.inSituQuart))
+    ;
   }
 };
