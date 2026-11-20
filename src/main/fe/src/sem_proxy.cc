@@ -142,6 +142,17 @@ SEMproxy::SEMproxy(const SemProxyOptions& opt)
   in_situ_compute_quarts_ = opt.inSituQuart;
   in_situ_active_ = in_situ_compute_stats_ | in_situ_compute_quarts_;
 
+  /* Piloting */
+  use_piloting_ = opt.usePiloting;
+  if (use_piloting_) {
+    Piloting::PilotingOptions options;
+    pilot_map_.create_map(opt.pilotingFile);
+  }
+  pilot_map_.opts->frequency = opt.snapshotsInterval;
+  pilot_map_.opts->z_slice = 0;
+  pilot_map_.opts->snap_now = 0;
+  pilot_map_.opts->stop = 0;
+
   const SolverFactory::methodType methodType = getMethod(opt.method);
   const SolverFactory::implemType implemType = getImplem(opt.implem);
   const SolverFactory::meshType meshType = getMesh(opt.mesh);
@@ -249,6 +260,9 @@ void SEMproxy::run()
   for (int indexTimeSample = 0; indexTimeSample < num_sample_;
        indexTimeSample++)
   {
+    if (pilot_map_.opts->stop)
+      break;
+
     startComputeTime = system_clock::now();
     const sclock::time_point t_compute = sclock::now();
     m_solver->computeOneStep(dt_, indexTimeSample, solverData);
@@ -728,7 +742,13 @@ void SEMproxy::saveSnapshotBin(int timestep) {
 }
 
 void SEMproxy::saveSnapshot(int timestep) {
-  if (timestep % snap_time_interval_)
+  if (snap_time_interval_ !=  pilot_map_.opts->frequency)
+    std::cout << "Snapshot interval changed ! " << snap_time_interval_ << " -> " << pilot_map_.opts->frequency << std::endl;
+  snap_time_interval_ = pilot_map_.opts->frequency;
+
+  bool snap = (timestep % snap_time_interval_) == 0 || (pilot_map_.opts->snap_now > snap_now_counter);
+  snap_now_counter = pilot_map_.opts->snap_now;
+  if (!snap)
     return;
 
   if (snap_use_csv_) {
@@ -933,8 +953,8 @@ void SEMproxy::computeInSituQuart(int timestep) {
 
 void SEMproxy::computeInSituStats(int timestep) {
   const int size = m_mesh->getNumberOfNodes();
-  auto p = pnGlobal;  
-  auto c = i1;  
+  auto p = pnGlobal;
+  auto c = i1;
   auto lambda = KOKKOS_LAMBDA(const int i, real_t& min, real_t & max, real_t& mean) {
       const real_t val = p(i, c);
       min = std::min(min, val);

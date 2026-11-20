@@ -12,6 +12,7 @@
 #include <model_struct.h>
 #include <model_unstruct.h>
 #include <solver_factory.h>
+#include <piloting.h>
 #include <utils.h>
 
 #include <cstdint>
@@ -155,11 +156,16 @@ class SEMproxy
   bool in_situ_compute_stats_ = false;
   bool in_situ_compute_quarts_ = false;
 
+  /* Piloting */
+  bool use_piloting_ = false;
+  std::string piloting_file_;
+  Piloting::PilotingMap pilot_map_;
+  size_t snap_now_counter = 0;
+
   real_t in_situ_min_ = 0;
   real_t in_situ_max_ = 0;
   real_t in_situ_mean_ = 0;
   real_t in_situ_quartiles_[3] = {0, 0, 0};
-
 
   // sismos
   std::ifstream receiver_positions_stream_;

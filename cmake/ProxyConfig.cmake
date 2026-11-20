@@ -6,6 +6,9 @@
 option(COMPILE_SEM "Compile Spectral Elements Method simulation" ON)
 option(COMPILE_FD "Compile finite elements simulation" ON)
 
+# Piloting options
+option(COMPILE_PILOTING "Compile piloting executable" ON)
+
 # Programming models
 option(USE_VECTOR "Use vectors." OFF)
 option(USE_KOKKOS "Use KOKKOS to parallelise loops" OFF)
