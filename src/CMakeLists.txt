@@ -3,6 +3,7 @@ add_subdirectory(discretization)
 add_subdirectory(model)
 add_subdirectory(solver)
 add_subdirectory(main)
+add_subdirectory(piloting)
 
 if(ENABLE_PYWRAP)
   install_pyfuntides_package(model solver)

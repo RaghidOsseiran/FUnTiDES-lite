@@ -6,6 +6,7 @@
 
 #include "sem_proxy.h"
 #include "sem_proxy_options.h"
+#include <piloting.h>
 
 time_point<system_clock> startInitTime;
 

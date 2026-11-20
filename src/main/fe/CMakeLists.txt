@@ -21,6 +21,7 @@ if(COMPILE_SEM)
       proxy_model_struct
       proxy_model_unstruct
       proxy_utils
+      piloting
       ${STDCXXFS_LIB}
   )
 
