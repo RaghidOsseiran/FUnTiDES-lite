@@ -5,6 +5,7 @@ if(COMPILE_SEM)
   add_executable(semproxy
     src/main.cc
     src/sem_proxy.cc
+    src/insitu_ppm.cc
   )
 
   target_include_directories(semproxy
