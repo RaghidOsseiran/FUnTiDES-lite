@@ -5,6 +5,7 @@
 #include <string>
 #include <filesystem>
 #include <fstream>
+#include "piloting.h"
 
 class SemProxyOptions
 {
@@ -35,6 +36,10 @@ class SemProxyOptions
   std::string snapshotsFolder = ".";
   bool snapshotsUseCSV = 0;
   bool snapshotsUseHeaders = 0;
+
+  /* Piloting */
+  bool usePiloting = 0;
+  std::string pilotingFile = Piloting::default_file;
 
   std::string seismogramsFolder = "seismograms_recording";
 
@@ -127,6 +132,9 @@ class SemProxyOptions
         ("ins-interval", "In situ timestep interval (default 1)", cxxopts::value<int>(o.inSituInterval))
         ("ins-compute-stats", "Compute the stats of all values in-situ", cxxopts::value<bool>(o.inSituStats))
         ("ins-compute-quartiles", "Compute the values of quartiles (1st, 2nd, 3rd)", cxxopts::value<bool>(o.inSituQuart))
+
+        ("piloting", "Create and read from a shared memory handle used by the piloting executable", cxxopts::value<bool>(o.usePiloting))
+        ("piloting-file", "Filename for the piloting handle (default=\"" + Piloting::default_file + "\")", cxxopts::value<std::string>(o.pilotingFile))
     ;
   }
 };
