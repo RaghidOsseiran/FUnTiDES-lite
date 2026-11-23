@@ -1,10 +1,14 @@
 #pragma once
 
 #include <cxxopts.hpp>
+#include <cmath>
+#include <limits>
 #include <stdexcept>
 #include <string>
 #include <filesystem>
 #include <fstream>
+
+#include "insitu_ppm.h"
 
 class SemProxyOptions
 {
@@ -52,6 +56,23 @@ class SemProxyOptions
   std::string slicesFolder = "slices";
   float sliceZ = srcz;  // default: source z
 
+  // in-situ visualisation: PPM image of a slice of the pressure field
+  bool usePpm = false;
+  std::string ppmFolder = "ppm";
+  int ppmInterval = 0;            // steps between two images, 0: snapshotsInterval
+  std::string ppmPlane = "xy";    // xy|xz|yz
+  // position of the plane along its normal axis (m); NaN: source coordinate
+  float ppmPos = std::numeric_limits<float>::quiet_NaN();
+  std::string ppmFormat = "p6";          // p3 (text) | p6 (binary)
+  std::string ppmColormap = "coolwarm";  // coolwarm|viridis|jet
+  std::string ppmNorm = "local";         // local|running|fixed
+  bool ppmMinMaxBounds = false;  // bounds [min, max] instead of [-max|p|, max|p|]
+  float ppmVmax = std::numeric_limits<float>::quiet_NaN();  // ppm-norm fixed
+  float ppmVmin = std::numeric_limits<float>::quiet_NaN();  // NaN: -ppmVmax
+  std::string ppmInterp = "linear";  // nearest|linear|gll
+  std::string ppmDevice = "gpu";     // gpu|host
+  int ppmWidth = 0;                  // image width in pixels, 0: automatic
+
   // flush each snapshot/slice file to disk (fsync) inside the timed region
   bool syncWrites = false;
   std::string metricsFile = "metrics.json";
@@ -82,6 +103,32 @@ class SemProxyOptions
       throw std::runtime_error("--use-slices requires --mesh cartesian");
     if (useSlices && snapshotsInterval <= 0)
       throw std::runtime_error("snapshots-interval must be > 0");
+
+    if (usePpm)
+    {
+      // same structured numbering as the slices
+      if (mesh != "cartesian")
+        throw std::runtime_error("--use-ppm requires --mesh cartesian");
+      if (ppmInterval < 0 || (ppmInterval == 0 && snapshotsInterval <= 0))
+        throw std::runtime_error(
+            "ppm-interval (or snapshots-interval) must be > 0");
+      // each parser throws with the list of the accepted values
+      parsePpmPlane(ppmPlane);
+      parsePpmFormat(ppmFormat);
+      parsePpmColormap(ppmColormap);
+      parsePpmInterp(ppmInterp);
+      parsePpmDevice(ppmDevice);
+      if (parsePpmNorm(ppmNorm) == PpmNorm::Fixed)
+      {
+        if (std::isnan(ppmVmax))
+          throw std::runtime_error("--ppm-norm fixed requires --ppm-vmax");
+        if (!(ppmVmax > (std::isnan(ppmVmin) ? -ppmVmax : ppmVmin)))
+          throw std::runtime_error("ppm-vmax must be > ppm-vmin (default "
+                                   "-ppm-vmax)");
+      }
+      if (ppmWidth != 0 && ppmWidth < 2)
+        throw std::runtime_error("ppm-width must be >= 2 (0: automatic)");
+    }
   }
 
   // Bind CLI flags to this instance (no --help here)
@@ -134,7 +181,21 @@ class SemProxyOptions
         ("use-slices", "Write a z-slice at every snapshot output step (snapshots-interval)", cxxopts::value<bool>(o.useSlices))
         ("slices-folder", "Folder where the slices are stored (created if missing)", cxxopts::value<std::string>(o.slicesFolder))
         ("slice-z", "z of the slice in m, snapped to the nearest node layer (default: source z)", cxxopts::value<float>(o.sliceZ))
-        ("sync-writes", "fsync each snapshot/slice file after writing it (timed)", cxxopts::value<bool>(o.syncWrites))
+        ("use-ppm", "In-situ visualisation: write a PPM image of a slice of the pressure field", cxxopts::value<bool>(o.usePpm))
+        ("ppm-folder", "Folder where the PPM images are stored (created if missing)", cxxopts::value<std::string>(o.ppmFolder))
+        ("ppm-interval", "Number of simulation steps between two images (default: snapshots-interval)", cxxopts::value<int>(o.ppmInterval))
+        ("ppm-plane", "Cut plane: xy|xz|yz (default xy)", cxxopts::value<std::string>(o.ppmPlane))
+        ("ppm-pos", "Position of the plane along its normal axis in m, snapped to the nearest node layer (default: source coordinate)", cxxopts::value<float>(o.ppmPos))
+        ("ppm-format", "p3 (text) | p6 (binary, default)", cxxopts::value<std::string>(o.ppmFormat))
+        ("ppm-colormap", "coolwarm (default) | viridis | jet", cxxopts::value<std::string>(o.ppmColormap))
+        ("ppm-norm", "Bounds of the colour scale: local (current image, default) | running (all the images so far) | fixed (--ppm-vmax)", cxxopts::value<std::string>(o.ppmNorm))
+        ("ppm-minmax-bounds", "local/running: use [min, max] instead of the symmetric [-max|p|, +max|p|]", cxxopts::value<bool>(o.ppmMinMaxBounds))
+        ("ppm-vmax", "Upper bound of the colour scale for --ppm-norm fixed", cxxopts::value<float>(o.ppmVmax))
+        ("ppm-vmin", "Lower bound of the colour scale for --ppm-norm fixed (default: -ppm-vmax)", cxxopts::value<float>(o.ppmVmin))
+        ("ppm-interp", "Resampling of the nodes on the pixels: nearest | linear (default) | gll (Lagrange basis of the element)", cxxopts::value<std::string>(o.ppmInterp))
+        ("ppm-device", "gpu (default): the image is built by Kokkos kernels, the host reads only the image | host: the slice is read and rendered on the CPU", cxxopts::value<std::string>(o.ppmDevice))
+        ("ppm-width", "Image width in pixels, the height follows (default: pixel = smallest node spacing)", cxxopts::value<int>(o.ppmWidth))
+        ("sync-writes", "fsync each snapshot/slice/image file after writing it (timed)", cxxopts::value<bool>(o.syncWrites))
         ("metrics-file", "JSON file where run timers and byte counts are written", cxxopts::value<std::string>(o.metricsFile))
         ("ins-interval", "In situ timestep interval (default 1)", cxxopts::value<int>(o.inSituInterval))
         ("ins-compute-stats", "Compute the stats of all values in-situ", cxxopts::value<bool>(o.inSituStats))

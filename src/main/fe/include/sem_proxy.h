@@ -20,6 +20,7 @@
 #include <variant>
 #include <vector>
 
+#include "insitu_ppm.h"
 #include "sem_proxy_options.h"
 
 /**
@@ -154,6 +155,11 @@ class SEMproxy
   float slice_z_req_ = 0;     // z asked with --slice-z
   std::vector<float> slice_buf_;  // nx*ny values, allocated once
 
+  // in-situ visualisation (PPM images of a slice), see insitu_ppm.h
+  bool is_ppm_ = false;
+  int ppm_interval_ = 0;  // steps between two images
+  InSituPpm ppm_;
+
   bool sync_writes_ = false;
   SemProxyOptions opt_;  // kept for the metrics file
 
@@ -188,6 +194,7 @@ class SEMproxy
   std::string snapshotHeaderPath() const;
   std::string slicePath(int timestep) const;
   void initSlices();
+  void initPpm();
   static void syncFile(const std::string& path);
 
   // sismos

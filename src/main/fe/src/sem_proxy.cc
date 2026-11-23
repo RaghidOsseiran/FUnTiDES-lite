@@ -144,6 +144,8 @@ SEMproxy::SEMproxy(const SemProxyOptions& opt)
   is_slices_ = opt.useSlices;
   slice_folder_ = opt.slicesFolder;
   slice_z_req_ = opt.sliceZ;
+  is_ppm_ = opt.usePpm;
+  ppm_interval_ = opt.ppmInterval > 0 ? opt.ppmInterval : opt.snapshotsInterval;
   sync_writes_ = opt.syncWrites;
   opt_ = opt;
 
@@ -237,6 +239,7 @@ SEMproxy::SEMproxy(const SemProxyOptions& opt)
   std::cout << "Simulated time is " << timemax_ << "s" << std::endl;
 
   if (is_slices_) initSlices();
+  if (is_ppm_) initPpm();
 }
 
 void SEMproxy::run()
@@ -281,6 +284,15 @@ void SEMproxy::run()
 
     const bool is_output_step = (is_snapshots_ || is_slices_) &&
                                 indexTimeSample % snap_time_interval_ == 0;
+    const bool is_ppm_step =
+        is_ppm_ && indexTimeSample % ppm_interval_ == 0;
+
+    // Image first: in gpu mode it reads the field where the solver left it
+    // (on the GPU). After a slice or a snapshot, pages of the field would
+    // already be on the host and the image would pay for their way back.
+    // Each phase is timed inside output() (see PpmMetrics).
+    if (is_ppm_step)
+      ppm_.output(pnGlobal, i1, indexTimeSample, sampleTime(indexTimeSample));
 
     // Slice before snapshot: the snapshot reads every node on the host, so
     // after it the slice pages would already be host-resident and the
@@ -318,7 +330,7 @@ void SEMproxy::run()
         metrics_.header_bytes +=
             std::filesystem::file_size(snapshotHeaderPath());
     }
-    previous_step_was_output = is_output_step;
+    previous_step_was_output = is_output_step || is_ppm_step;
 
     startSeismoTime = system_clock::now();
     // Save pressure at receiver: i1 holds the field just computed (time
@@ -368,6 +380,7 @@ void SEMproxy::run()
     totalOutputTime += system_clock::now() - startOutputTime;
   }
   metrics_.time_loop_s = secondsBetween(startLoop, sclock::now());
+  if (is_ppm_) ppm_.finalize();  // closes ppm-index.csv
 
   float kerneltime_ms = time_point_cast<microseconds>(totalComputeTime)
                             .time_since_epoch()
@@ -396,6 +409,9 @@ void SEMproxy::run()
        << endl;
   cout << "---- Elapsed In Situ Seismos Time : " << insituseismostime_ms / 1E6
        << " seconds." << endl;
+  if (is_ppm_)
+    cout << "---- Elapsed In Situ PPM Time : " << ppm_.metrics().total_s
+         << " seconds (" << ppm_.metrics().count << " images)." << endl;
   cout << "------------------------------------------------ " << endl;
 }
 
@@ -1068,6 +1084,56 @@ void SEMproxy::writeSlice(int timestep) {
   if (sync_writes_) syncFile(path);
 }
 
+// Fill the PpmConfig from the options and give the renderer the coordinates
+// of the node layers on each axis. Called once from the constructor.
+void SEMproxy::initPpm() {
+  const int nx = nb_nodes_[0];
+  const int ny = nb_nodes_[1];
+  const int nz = nb_nodes_[2];
+  const std::size_t plane = std::size_t(nx) * ny;
+  if (std::size_t(m_mesh->getNumberOfNodes()) != plane * nz)
+    throw std::runtime_error("ppm: node count is not nx*ny*nz");
+
+  PpmConfig cfg;
+  cfg.folder = opt_.ppmFolder;
+  cfg.plane = parsePpmPlane(opt_.ppmPlane);
+  cfg.format = parsePpmFormat(opt_.ppmFormat);
+  cfg.colormap = parsePpmColormap(opt_.ppmColormap);
+  cfg.norm = parsePpmNorm(opt_.ppmNorm);
+  cfg.interp = parsePpmInterp(opt_.ppmInterp);
+  cfg.device = parsePpmDevice(opt_.ppmDevice);
+  cfg.symmetric = !opt_.ppmMinMaxBounds;
+  cfg.vmax = opt_.ppmVmax;
+  cfg.vmin = std::isnan(opt_.ppmVmin) ? -opt_.ppmVmax : opt_.ppmVmin;
+  cfg.width = opt_.ppmWidth;
+  cfg.sync_writes = sync_writes_;
+  // default position: the plane goes through the source
+  const int normal_axis = cfg.plane == PpmPlane::XY   ? 2
+                          : cfg.plane == PpmPlane::XZ ? 1
+                                                      : 0;
+  cfg.position =
+      std::isnan(opt_.ppmPos) ? src_coord_[normal_axis] : opt_.ppmPos;
+
+  // node (i, j, k) is i + j*nx + k*nx*ny: one coordinate list per axis
+  std::array<std::vector<float>, 3> coords;
+  for (int i = 0; i < nx; ++i)
+    coords[0].push_back(m_mesh->nodeCoord(i, 0));
+  for (int j = 0; j < ny; ++j)
+    coords[1].push_back(m_mesh->nodeCoord(j * nx, 1));
+  for (int k = 0; k < nz; ++k)
+    coords[2].push_back(m_mesh->nodeCoord(int(k * plane), 2));
+
+  ppm_.init(cfg, coords, m_mesh->getOrder(), dt_, ppm_interval_);
+
+  cout << "PPM images: plane " << opt_.ppmPlane << ", layer " << ppm_.layer()
+       << " at " << ppm_.layerPosition() << " m (requested " << cfg.position
+       << " m), " << ppm_.width() << " x " << ppm_.height() << " pixels of "
+       << ppm_.pixelSize() << " m, every " << ppm_interval_ << " steps, "
+       << opt_.ppmFormat << ", " << opt_.ppmColormap << ", norm "
+       << opt_.ppmNorm << ", interp " << opt_.ppmInterp << ", device "
+       << opt_.ppmDevice << endl;
+}
+
 // Force the data of an already closed file to the disk (--sync-writes).
 void SEMproxy::syncFile(const std::string& path) {
   const int fd = ::open(path.c_str(), O_RDONLY);
@@ -1120,6 +1186,20 @@ void SEMproxy::writeMetrics() {
       << "    \"slice_z_requested\": " << jsonFloat(slice_z_req_) << ",\n"
       << "    \"slice_k\": " << (is_slices_ ? std::to_string(slice_k_) : "null") << ",\n"
       << "    \"slice_z\": " << (is_slices_ ? jsonFloat(slice_z_) : "null") << ",\n"
+      << "    \"use_ppm\": " << jsonBool(is_ppm_) << ",\n"
+      << "    \"ppm_folder\": " << jsonString(opt_.ppmFolder) << ",\n"
+      << "    \"ppm_interval\": " << ppm_interval_ << ",\n"
+      << "    \"ppm_plane\": " << jsonString(opt_.ppmPlane) << ",\n"
+      << "    \"ppm_layer\": " << (is_ppm_ ? std::to_string(ppm_.layer()) : "null") << ",\n"
+      << "    \"ppm_position\": " << (is_ppm_ ? jsonFloat(ppm_.layerPosition()) : "null") << ",\n"
+      << "    \"ppm_width\": " << (is_ppm_ ? std::to_string(ppm_.width()) : "null") << ",\n"
+      << "    \"ppm_height\": " << (is_ppm_ ? std::to_string(ppm_.height()) : "null") << ",\n"
+      << "    \"ppm_format\": " << jsonString(opt_.ppmFormat) << ",\n"
+      << "    \"ppm_colormap\": " << jsonString(opt_.ppmColormap) << ",\n"
+      << "    \"ppm_norm\": " << jsonString(opt_.ppmNorm) << ",\n"
+      << "    \"ppm_minmax_bounds\": " << jsonBool(opt_.ppmMinMaxBounds) << ",\n"
+      << "    \"ppm_interp\": " << jsonString(opt_.ppmInterp) << ",\n"
+      << "    \"ppm_device\": " << jsonString(opt_.ppmDevice) << ",\n"
       << "    \"sync_writes\": " << jsonBool(sync_writes_) << ",\n"
       << "    \"seismograms_folder\": " << jsonString(seismograms_data_folder_) << ",\n"
       << "    \"ins_interval\": " << in_situ_interval_ << ",\n"
@@ -1147,7 +1227,18 @@ void SEMproxy::writeMetrics() {
       << "  \"seismo_bytes\": " << m.seismo_bytes << ",\n"
       << "  \"insitu_seismos_stats_s\": " << jsonDouble(m.insitu_seismos_stats_s) << ",\n"
       << "  \"insitu_seismos_peaks_s\": " << jsonDouble(m.insitu_seismos_peaks_s) << ",\n"
-      << "  \"insitu_seismos_count\": " << m.insitu_seismos_count << "\n"
+      << "  \"insitu_seismos_count\": " << m.insitu_seismos_count << ",\n"
+      << "  \"ppm_total_s\": " << jsonDouble(ppm_.metrics().total_s) << ",\n"
+      << "  \"ppm_extract_s\": " << jsonDouble(ppm_.metrics().extract_s) << ",\n"
+      << "  \"ppm_minmax_s\": " << jsonDouble(ppm_.metrics().minmax_s) << ",\n"
+      << "  \"ppm_render_s\": " << jsonDouble(ppm_.metrics().render_s) << ",\n"
+      << "  \"ppm_transfer_s\": " << jsonDouble(ppm_.metrics().transfer_s) << ",\n"
+      << "  \"ppm_encode_s\": " << jsonDouble(ppm_.metrics().encode_s) << ",\n"
+      << "  \"ppm_write_s\": " << jsonDouble(ppm_.metrics().write_s) << ",\n"
+      << "  \"ppm_fsync_s\": " << jsonDouble(ppm_.metrics().fsync_s) << ",\n"
+      << "  \"ppm_count\": " << ppm_.metrics().count << ",\n"
+      << "  \"ppm_image_bytes\": " << ppm_.metrics().image_bytes << ",\n"
+      << "  \"ppm_meta_bytes\": " << ppm_.metrics().meta_bytes << "\n"
         << "}\n";
   out.close();
   if (!out) throw std::runtime_error("Cannot write the metrics file " + path);
